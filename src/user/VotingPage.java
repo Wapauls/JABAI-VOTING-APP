@@ -11,6 +11,8 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import javax.imageio.ImageIO;
+import database.DatabaseHelper;
+import database.Candidate;
 
 public class VotingPage extends JFrame {
     private JPanel mainPanel;
@@ -39,6 +41,8 @@ public class VotingPage extends JFrame {
     // Icons
     private ImageIcon arrowDownIcon;
     private ImageIcon closeIcon;
+    // current logged-in student ID (may be null)
+    private String currentStudentID;
     
     // Custom JLabel class for gradient text
     class GradientLabel extends JLabel {
@@ -149,30 +153,41 @@ public class VotingPage extends JFrame {
     }
 
     public VotingPage() {
+        this.currentStudentID = null;
+        buildUI();
+    }
+
+    public VotingPage(String studentID) {
+        this.currentStudentID = studentID;
+        buildUI();
+    }
+
+    // Shared UI builder for both constructors
+    private void buildUI() {
         setTitle("Voting System");
         setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
         setSize(839, 525);
         setLocationRelativeTo(null);
         setResizable(false);
         setUndecorated(true);
-        
+
         // Load custom fonts and icons
         loadCustomFonts();
         loadIcons();
-        
+
         // Create main panel with dark background (#141414)
         mainPanel = new JPanel();
         mainPanel.setBackground(new Color(20, 20, 20));
         mainPanel.setLayout(null);
         mainPanel.setBorder(new EmptyBorder(0, 0, 0, 0));
-        
+
         // Title - Voting System (Gradient effect: #f9ffff to #48f8fe)
         titleLabel = new GradientLabel();
         titleLabel.setText("Voting System");
         titleLabel.setFont(interBold.deriveFont(24f));
         titleLabel.setBounds(0, 0, 211, 57);
         titleLabel.setHorizontalAlignment(SwingConstants.CENTER);
-        
+
         // Add dragging to title label
         titleLabel.addMouseListener(new MouseListener() {
             public void mousePressed(MouseEvent e) {
@@ -184,16 +199,16 @@ public class VotingPage extends JFrame {
             public void mouseEntered(MouseEvent e) {}
             public void mouseExited(MouseEvent e) {}
         });
-        
+
         titleLabel.addMouseMotionListener(new MouseMotionListener() {
             public void mouseDragged(MouseEvent e) {
                 setLocation(e.getXOnScreen() - dragX, e.getYOnScreen() - dragY);
             }
             public void mouseMoved(MouseEvent e) {}
         });
-        
+
         mainPanel.add(titleLabel);
-        
+
         // Close Button with icon
         closeButton = new JButton();
         closeButton.setBounds(799, 16, 24, 24);
@@ -201,7 +216,7 @@ public class VotingPage extends JFrame {
         closeButton.setBorder(BorderFactory.createEmptyBorder());
         closeButton.setFocusPainted(false);
         closeButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        
+
         // Use custom close icon or fallback
         if (closeIcon != null) {
             Image scaledCloseIcon = closeIcon.getImage().getScaledInstance(14, 14, Image.SCALE_SMOOTH);
@@ -218,17 +233,17 @@ public class VotingPage extends JFrame {
             g2d.dispose();
             closeButton.setIcon(new ImageIcon(xIcon));
         }
-        
+
         closeButton.addActionListener((ActionEvent e) -> System.exit(0));
         mainPanel.add(closeButton);
-        
+
         // Section Bar divider (#1c1c1c)
         sectionBar = new JLabel();
         sectionBar.setBackground(new Color(28, 28, 28));
         sectionBar.setOpaque(true);
         sectionBar.setBounds(9, 57, 821, 2);
         mainPanel.add(sectionBar);
-        
+
         // Voting Page Header
         votingPageLabel = new JLabel("Voting Page");
         votingPageLabel.setFont(interRegular.deriveFont(24f));
@@ -236,19 +251,19 @@ public class VotingPage extends JFrame {
         votingPageLabel.setBounds(217, 65, 405, 47);
         votingPageLabel.setHorizontalAlignment(SwingConstants.CENTER);
         mainPanel.add(votingPageLabel);
-        
+
         // Courses ComboBox with specified options - NO EXTRA PADDING
         JLabel coursesLabel = new JLabel("Courses:");
         coursesLabel.setFont(interRegular.deriveFont(16f));
         coursesLabel.setForeground(Color.WHITE);
         coursesLabel.setBounds(23, 112, 93, 45);
         mainPanel.add(coursesLabel);
-        
+
         String[] courses = {"Select a Course", "BSCS", "BSHM", "BAPOLS", "BSTM", "BSBA", "BSED"};
         coursesCombo = new PaddedComboBox(courses);
         coursesCombo.setBounds(116, 120, 286, 29);
         coursesCombo.setSelectedIndex(0);
-        
+
         // Remove any extra padding from the combobox display
         if (coursesCombo.getEditor() != null) {
             Component editor = coursesCombo.getEditor().getEditorComponent();
@@ -256,92 +271,92 @@ public class VotingPage extends JFrame {
                 ((JTextField) editor).setBorder(BorderFactory.createEmptyBorder(0, 8, 0, 0));
             }
         }
-        
+
         mainPanel.add(coursesCombo);
-        
+
         // Position ComboBox with specified options - NO EXTRA PADDING
         JLabel positionLabel = new JLabel("Position:");
         positionLabel.setFont(interRegular.deriveFont(16f));
         positionLabel.setForeground(Color.WHITE);
         positionLabel.setBounds(431, 112, 93, 45);
         mainPanel.add(positionLabel);
-        
+
         String[] positions = {"Select a Position", "President", "Vice President", 
                               "Secretary", "Treasurer", "Auditor"};
         positionCombo = new PaddedComboBox(positions);
         positionCombo.setBounds(530, 120, 286, 29);
         positionCombo.setSelectedIndex(0);
-        
+
         if (positionCombo.getEditor() != null) {
             Component editor = positionCombo.getEditor().getEditorComponent();
             if (editor instanceof JTextField) {
                 ((JTextField) editor).setBorder(BorderFactory.createEmptyBorder(0, 8, 0, 0));
             }
         }
-        
+
         mainPanel.add(positionCombo);
-        
+
         // Year ComboBox with specified options - NO EXTRA PADDING
         JLabel yearLabel = new JLabel("Year:");
         yearLabel.setFont(interRegular.deriveFont(16f));
         yearLabel.setForeground(Color.WHITE);
         yearLabel.setBounds(23, 165, 93, 45);
         mainPanel.add(yearLabel);
-        
+
         String[] years = {"Select a Year Level", "1st", "2nd", "3rd", "4th"};
         yearCombo = new PaddedComboBox(years);
         yearCombo.setBounds(116, 173, 286, 29);
         yearCombo.setSelectedIndex(0);
-        
+
         if (yearCombo.getEditor() != null) {
             Component editor = yearCombo.getEditor().getEditorComponent();
             if (editor instanceof JTextField) {
                 ((JTextField) editor).setBorder(BorderFactory.createEmptyBorder(0, 8, 0, 0));
             }
         }
-        
+
         mainPanel.add(yearCombo);
-        
+
         // Section ComboBox with A to Z options - NO EXTRA PADDING
         JLabel sectionLabel = new JLabel("Section:");
         sectionLabel.setFont(interRegular.deriveFont(16f));
         sectionLabel.setForeground(Color.WHITE);
         sectionLabel.setBounds(431, 165, 93, 45);
         mainPanel.add(sectionLabel);
-        
+
         // Create sections A to Z
         String[] sections = new String[27];
         sections[0] = "Select a Section";
         for (int i = 1; i <= 26; i++) {
             sections[i] = String.valueOf((char) ('A' + i - 1));
         }
-        
+
         sectionCombo = new PaddedComboBox(sections);
         sectionCombo.setBounds(530, 173, 286, 29);
         sectionCombo.setSelectedIndex(0);
-        
+
         if (sectionCombo.getEditor() != null) {
             Component editor = sectionCombo.getEditor().getEditorComponent();
             if (editor instanceof JTextField) {
                 ((JTextField) editor).setBorder(BorderFactory.createEmptyBorder(0, 8, 0, 0));
             }
         }
-        
+
         mainPanel.add(sectionCombo);
-        
+
         // List of Candidates Label
         JLabel candidatesLabel = new JLabel("List of Candidates");
         candidatesLabel.setFont(interRegular.deriveFont(16f));
         candidatesLabel.setForeground(Color.WHITE);
         candidatesLabel.setBounds(23, 218, 219, 28);
         mainPanel.add(candidatesLabel);
-        
+
         // Candidates Panel (exactly as in design)
         candidatesPanel = new JPanel();
         candidatesPanel.setLayout(null);
         candidatesPanel.setBounds(23, 256, 379, 247);
         candidatesPanel.setBackground(new Color(217, 217, 217));
-        
+
         // Candidate header
         JLabel nameHeader = new JLabel("Name");
         nameHeader.setFont(interRegular.deriveFont(14f));
@@ -349,72 +364,49 @@ public class VotingPage extends JFrame {
         nameHeader.setBounds(5, 0, 45, 28);
         nameHeader.setHorizontalAlignment(SwingConstants.CENTER);
         candidatesPanel.add(nameHeader);
-        
+
         // Separator line
         JSeparator separator = new JSeparator();
         separator.setBackground(new Color(97, 97, 97));
         separator.setForeground(new Color(97, 97, 97));
         separator.setBounds(5, 29, 369, 1);
         candidatesPanel.add(separator);
-        
-        // Candidate 1
-        JLabel candidate1 = new JLabel("Juan E. Dela Cruz");
-        candidate1.setFont(interRegular.deriveFont(14f));
-        candidate1.setForeground(new Color(1, 1, 1));
-        candidate1.setBounds(5, 28, 196, 28);
-        candidate1.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        candidate1.addMouseListener(new java.awt.event.MouseAdapter() {
-            @Override
-            public void mouseClicked(java.awt.event.MouseEvent e) {
-                selectCandidate("Juan E. Dela Cruz", candidate1);
-            }
-        });
-        candidatesPanel.add(candidate1);
-        
-        // Candidate 2
-        JLabel candidate2 = new JLabel("Jack N. Jill");
-        candidate2.setFont(interRegular.deriveFont(14f));
-        candidate2.setForeground(new Color(1, 1, 1));
-        candidate2.setBounds(5, 47, 196, 28);
-        candidate2.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        candidate2.addMouseListener(new java.awt.event.MouseAdapter() {
-            @Override
-            public void mouseClicked(java.awt.event.MouseEvent e) {
-                selectCandidate("Jack N. Jill", candidate2);
-            }
-        });
-        candidatesPanel.add(candidate2);
-        
-        // Candidate 3
-        JLabel candidate3 = new JLabel("Mang E. juan");
-        candidate3.setFont(interRegular.deriveFont(14f));
-        candidate3.setForeground(new Color(1, 1, 1));
-        candidate3.setBounds(5, 66, 196, 28);
-        candidate3.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        candidate3.addMouseListener(new java.awt.event.MouseAdapter() {
-            @Override
-            public void mouseClicked(java.awt.event.MouseEvent e) {
-                selectCandidate("Mang E. juan", candidate3);
-            }
-        });
-        candidatesPanel.add(candidate3);
-        
+
+        // Dynamically load candidates from the text database
+        java.util.List<Candidate> candidates = DatabaseHelper.readCandidates();
+        int yPos = 28;
+        for (Candidate c : candidates) {
+            JLabel lbl = new JLabel(c.name);
+            lbl.setFont(interRegular.deriveFont(14f));
+            lbl.setForeground(new Color(1, 1, 1));
+            lbl.setBounds(5, yPos, 196, 28);
+            lbl.setCursor(new Cursor(Cursor.HAND_CURSOR));
+            lbl.addMouseListener(new java.awt.event.MouseAdapter() {
+                @Override
+                public void mouseClicked(java.awt.event.MouseEvent e) {
+                    selectCandidate(c.name, lbl);
+                }
+            });
+            candidatesPanel.add(lbl);
+            yPos += 19;
+        }
+
         mainPanel.add(candidatesPanel);
-        
+
         // Selected Candidate Label
         selectedCandidateLabel = new JLabel("Selected Candidate: None");
         selectedCandidateLabel.setFont(interRegular.deriveFont(16f));
         selectedCandidateLabel.setForeground(Color.WHITE);
         selectedCandidateLabel.setBounds(431, 256, 385, 29);
         mainPanel.add(selectedCandidateLabel);
-        
+
         // Description Label
         JLabel descriptionLabel = new JLabel("Description:");
         descriptionLabel.setFont(interRegular.deriveFont(16f));
         descriptionLabel.setForeground(Color.WHITE);
         descriptionLabel.setBounds(431, 285, 93, 29);
         mainPanel.add(descriptionLabel);
-        
+
         // Description Area (exact text from design)
         descriptionArea = new JTextArea("Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus nec lacinia magna, vitae maximus lacus.");
         descriptionArea.setBounds(540, 291, 276, 140);
@@ -426,7 +418,7 @@ public class VotingPage extends JFrame {
         descriptionArea.setWrapStyleWord(true);
         descriptionArea.setBorder(BorderFactory.createEmptyBorder());
         mainPanel.add(descriptionArea);
-        
+
         // Vote Button (#48f8fe background) - exact design
         voteButton = new JButton() {
             @Override
@@ -435,7 +427,7 @@ public class VotingPage extends JFrame {
                 g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
                 g2d.setColor(new Color(72, 248, 254));
                 g2d.fillRect(0, 0, getWidth(), getHeight());
-                
+
                 // Draw text
                 g2d.setColor(Color.BLACK);
                 FontMetrics fm = g2d.getFontMetrics();
@@ -455,10 +447,10 @@ public class VotingPage extends JFrame {
         voteButton.addActionListener((ActionEvent e) -> {
             String candidate = selectedCandidateLabel.getText().replace("Selected Candidate: ", "");
             String position = (String) positionCombo.getSelectedItem();
-            SwingUtilities.invokeLater(() -> new user.VoteConfirmationDialog(candidate, position, VotingPage.this));
+            SwingUtilities.invokeLater(() -> new user.VoteConfirmationDialog(candidate, position, VotingPage.this, currentStudentID));
         });
         mainPanel.add(voteButton);
-        
+
         // Back Button - exact design
         backButton = new JButton("← Back");
         backButton.setBounds(724, 477, 58, 22);
@@ -487,7 +479,7 @@ public class VotingPage extends JFrame {
             dispose();
         });
         mainPanel.add(backButton);
-        
+
         add(mainPanel);
         setVisible(true);
     }
@@ -495,44 +487,37 @@ public class VotingPage extends JFrame {
     // Method to handle candidate selection
     private void selectCandidate(String candidateName, JLabel candidateLabel) {
         selectedCandidateLabel.setText("Selected Candidate: " + candidateName);
-        
-        // Update description based on candidate
-        switch (candidateName) {
-            case "Juan E. Dela Cruz":
-                descriptionArea.setText("JUAN E. DELA CRUZ\n\n" +
-                                      "Position: President\n" +
-                                      "Platform: Academic Excellence\n\n" +
-                                      "Lorem ipsum dolor sit amet, consectetur adipiscing elit. " +
-                                      "Vivamus nec lacinia magna, vitae maximus lacus. " +
-                                      "Donec euismod, nisl vel tincidunt aliquam.");
+
+        // Try to find candidate description from database
+        java.util.List<Candidate> candidates = DatabaseHelper.readCandidates();
+        String desc = null;
+        for (Candidate c : candidates) {
+            if (c.name.equals(candidateName)) {
+                desc = c.description;
                 break;
-            case "Jack N. Jill":
-                descriptionArea.setText("JACK N. JILL\n\n" +
-                                      "Position: President\n" +
-                                      "Platform: Student Welfare\n\n" +
-                                      "Lorem ipsum dolor sit amet, consectetur adipiscing elit. " +
-                                      "Vivamus nec lacinia magna, vitae maximus lacus. " +
-                                      "Donec euismod, nisl vel tincidunt aliquam.");
-                break;
-            case "Mang E. juan":
-                descriptionArea.setText("MANG E. JUAN\n\n" +
-                                      "Position: President\n" +
-                                      "Platform: Campus Development\n\n" +
-                                      "Lorem ipsum dolor sit amet, consectetur adipiscing elit. " +
-                                      "Vivamus nec lacinia magna, vitae maximus lacus. " +
-                                      "Donec euismod, nisl vel tincidunt aliquam.");
-                break;
-        }
-        
-        // Reset all candidates to default color
-        for (Component comp : candidatesPanel.getComponents()) {
-            if (comp instanceof JLabel && comp != candidatesPanel.getComponent(0) && comp != candidatesPanel.getComponent(1)) {
-                ((JLabel) comp).setForeground(new Color(1, 1, 1));
             }
         }
-        
-        // Highlight selected candidate
-        candidateLabel.setForeground(new Color(72, 248, 254));
+
+        if (desc != null && !desc.isEmpty()) {
+            descriptionArea.setText(desc);
+        } else {
+            descriptionArea.setText(candidateName + "\n\nNo description available.");
+        }
+
+        // Reset all candidate labels to default color (skip header and separator by text check)
+        for (Component comp : candidatesPanel.getComponents()) {
+            if (comp instanceof JLabel) {
+                JLabel lab = (JLabel) comp;
+                if (!"Name".equals(lab.getText())) {
+                    lab.setForeground(new Color(1, 1, 1));
+                }
+            }
+        }
+
+        // Highlight selected candidate label
+        if (candidateLabel != null) {
+            candidateLabel.setForeground(new Color(72, 248, 254));
+        }
     }
 
     public static void main(String[] args) {

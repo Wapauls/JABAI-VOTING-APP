@@ -1,5 +1,8 @@
 package admin;
 
+import database.DatabaseHelper;
+import database.Candidate;
+
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
@@ -514,6 +517,15 @@ public class AdminAddCandidate extends JFrame {
         // Revalidate and repaint to show the new candidate
         addedCandidatesPanel.revalidate();
         addedCandidatesPanel.repaint();
+
+        // Persist candidate to text database
+        try {
+            Candidate c = new Candidate(name, position, course, year, section, description);
+            DatabaseHelper.appendCandidate(c);
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            JOptionPane.showMessageDialog(this, "Warning: could not persist candidate to database.", "Warning", JOptionPane.WARNING_MESSAGE);
+        }
         
         // Show success message
         String message = String.format(

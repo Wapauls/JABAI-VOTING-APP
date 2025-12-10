@@ -1,5 +1,8 @@
 package user;
 
+import database.DatabaseHelper;
+import database.Vote;
+
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
@@ -198,110 +201,49 @@ public class VoteHistoryPage extends JFrame {
         separator.setBounds(10, 30, 774, 1);
         candidatesPanel.add(separator);
         
-        // Row 1 - Juan E. Dela Cruz
-        JLabel candidate1 = new JLabel("Juan E. Dela Cruz");
-        candidate1.setFont(interRegular.deriveFont(14f));
-        candidate1.setForeground(new Color(1, 1, 1));
-        candidate1.setBounds(33, 34, 364, 24);
-        candidatesPanel.add(candidate1);
-        
-        JLabel position1 = new JLabel("President");
-        position1.setFont(interRegular.deriveFont(14f));
-        position1.setForeground(new Color(1, 1, 1));
-        position1.setBounds(239, 34, 179, 24);
-        position1.setHorizontalAlignment(SwingConstants.CENTER);
-        candidatesPanel.add(position1);
-        
-        JLabel year1 = new JLabel("1st");
-        year1.setFont(interRegular.deriveFont(14f));
-        year1.setForeground(new Color(1, 1, 1));
-        year1.setBounds(418, 34, 101, 24);
-        year1.setHorizontalAlignment(SwingConstants.CENTER);
-        candidatesPanel.add(year1);
-        
-        JLabel section1 = new JLabel("C");
-        section1.setFont(interRegular.deriveFont(14f));
-        section1.setForeground(new Color(1, 1, 1));
-        section1.setBounds(519, 34, 130, 24);
-        section1.setHorizontalAlignment(SwingConstants.CENTER);
-        candidatesPanel.add(section1);
-        
-        JLabel date1 = new JLabel("13/09/2025");
-        date1.setFont(interRegular.deriveFont(14f));
-        date1.setForeground(new Color(1, 1, 1));
-        date1.setBounds(649, 34, 158, 24);
-        date1.setHorizontalAlignment(SwingConstants.CENTER);
-        candidatesPanel.add(date1);
-        
-        // Row 2 - Jack N. Jill
-        JLabel candidate2 = new JLabel("Jack N. Jill");
-        candidate2.setFont(interRegular.deriveFont(14f));
-        candidate2.setForeground(new Color(1, 1, 1));
-        candidate2.setBounds(33, 58, 411, 24);
-        candidatesPanel.add(candidate2);
-        
-        JLabel position2 = new JLabel("Vice President");
-        position2.setFont(interRegular.deriveFont(14f));
-        position2.setForeground(new Color(1, 1, 1));
-        position2.setBounds(239, 58, 179, 24);
-        position2.setHorizontalAlignment(SwingConstants.CENTER);
-        candidatesPanel.add(position2);
-        
-        JLabel year2 = new JLabel("3rd");
-        year2.setFont(interRegular.deriveFont(14f));
-        year2.setForeground(new Color(1, 1, 1));
-        year2.setBounds(418, 58, 101, 24);
-        year2.setHorizontalAlignment(SwingConstants.CENTER);
-        candidatesPanel.add(year2);
-        
-        JLabel section2 = new JLabel("B");
-        section2.setFont(interRegular.deriveFont(14f));
-        section2.setForeground(new Color(1, 1, 1));
-        section2.setBounds(519, 58, 130, 24);
-        section2.setHorizontalAlignment(SwingConstants.CENTER);
-        candidatesPanel.add(section2);
-        
-        JLabel date2 = new JLabel("10/09/2025");
-        date2.setFont(interRegular.deriveFont(14f));
-        date2.setForeground(new Color(1, 1, 1));
-        date2.setBounds(649, 58, 158, 24);
-        date2.setHorizontalAlignment(SwingConstants.CENTER);
-        candidatesPanel.add(date2);
-        
-        // Row 3 - Mang E. juan
-        JLabel candidate3 = new JLabel("Mang E. juan");
-        candidate3.setFont(interRegular.deriveFont(14f));
-        candidate3.setForeground(new Color(1, 1, 1));
-        candidate3.setBounds(33, 82, 411, 24);
-        candidatesPanel.add(candidate3);
-        
-        JLabel position3 = new JLabel("Secretary");
-        position3.setFont(interRegular.deriveFont(14f));
-        position3.setForeground(new Color(1, 1, 1));
-        position3.setBounds(239, 82, 179, 24);
-        position3.setHorizontalAlignment(SwingConstants.CENTER);
-        candidatesPanel.add(position3);
-        
-        JLabel year3 = new JLabel("2nd");
-        year3.setFont(interRegular.deriveFont(14f));
-        year3.setForeground(new Color(1, 1, 1));
-        year3.setBounds(418, 82, 101, 24);
-        year3.setHorizontalAlignment(SwingConstants.CENTER);
-        candidatesPanel.add(year3);
-        
-        JLabel section3 = new JLabel("A");
-        section3.setFont(interRegular.deriveFont(14f));
-        section3.setForeground(new Color(1, 1, 1));
-        section3.setBounds(519, 82, 130, 24);
-        section3.setHorizontalAlignment(SwingConstants.CENTER);
-        candidatesPanel.add(section3);
-        
-        JLabel date3 = new JLabel("08/09/2025");
-        date3.setFont(interRegular.deriveFont(14f));
-        date3.setForeground(new Color(1, 1, 1));
-        date3.setBounds(649, 82, 158, 24);
-        date3.setHorizontalAlignment(SwingConstants.CENTER);
-        candidatesPanel.add(date3);
+        // Dynamically load votes from database
+        java.util.List<Vote> votes = DatabaseHelper.readVotes();
+        int yPos = 34;
+        for (Vote v : votes) {
+            // Extract date from ISO timestamp (first 10 chars: YYYY-MM-DD)
+            String dateStr = v.timestamp.length() >= 10 ? v.timestamp.substring(0, 10) : v.timestamp;
+            
+            JLabel candName = new JLabel(v.candidate);
+            candName.setFont(interRegular.deriveFont(14f));
+            candName.setForeground(new Color(1, 1, 1));
+            candName.setBounds(33, yPos, 364, 24);
+            candidatesPanel.add(candName);
+            
+            JLabel position = new JLabel(v.position);
+            position.setFont(interRegular.deriveFont(14f));
+            position.setForeground(new Color(1, 1, 1));
+            position.setBounds(239, yPos, 179, 24);
+            position.setHorizontalAlignment(SwingConstants.CENTER);
+            candidatesPanel.add(position);
+            
+            JLabel year = new JLabel(v.year);
+            year.setFont(interRegular.deriveFont(14f));
+            year.setForeground(new Color(1, 1, 1));
+            year.setBounds(418, yPos, 101, 24);
+            year.setHorizontalAlignment(SwingConstants.CENTER);
+            candidatesPanel.add(year);
+            
+            JLabel section = new JLabel(v.section);
+            section.setFont(interRegular.deriveFont(14f));
+            section.setForeground(new Color(1, 1, 1));
+            section.setBounds(519, yPos, 130, 24);
+            section.setHorizontalAlignment(SwingConstants.CENTER);
+            candidatesPanel.add(section);
+            
+            JLabel date = new JLabel(dateStr);
+            date.setFont(interRegular.deriveFont(14f));
+            date.setForeground(new Color(1, 1, 1));
+            date.setBounds(649, yPos, 158, 24);
+            date.setHorizontalAlignment(SwingConstants.CENTER);
+            candidatesPanel.add(date);
+            
+            yPos += 24;
+        }
         
         mainPanel.add(candidatesPanel);
         

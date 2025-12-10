@@ -283,8 +283,36 @@ public class UserApp extends JFrame {
         proceedButton.setFocusPainted(false);
         proceedButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
         proceedButton.addActionListener((ActionEvent e) -> {
-            // Open VotingPage and close UserApp
-            SwingUtilities.invokeLater(() -> new user.VotingPage());
+            // Validate required fields
+            String name = nameField.getText().trim();
+            String studentID = studentIDField.getText().trim();
+            String email = emailField.getText().trim();
+            String year = yearField.getText().trim();
+            String section = sectionField.getText().trim();
+
+            if (name.isEmpty() || studentID.isEmpty() || email.isEmpty() || year.isEmpty() || section.isEmpty()) {
+                errorLabel.setText("Please fill all required fields.");
+                return;
+            }
+
+            // If voter exists, check if they've already voted
+            if (database.DatabaseHelper.voterExists(studentID)) {
+                boolean voted = database.DatabaseHelper.hasVoted(studentID);
+                if (voted) {
+                    // Show message and open vote history instead
+                    JOptionPane.showMessageDialog(this, "You have already voted.", "Already Voted", JOptionPane.INFORMATION_MESSAGE);
+                    SwingUtilities.invokeLater(() -> new user.VoteHistoryPage());
+                    dispose();
+                    return;
+                }
+            } else {
+                // Register new voter (course left empty)
+                database.Voter v = new database.Voter(studentID, name, email, "", year, section, false, "");
+                database.DatabaseHelper.addVoter(v);
+            }
+
+            // Open VotingPage with current student ID
+            SwingUtilities.invokeLater(() -> new user.VotingPage(studentID));
             dispose();
         });
         mainPanel.add(proceedButton);

@@ -11,6 +11,9 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import javax.imageio.ImageIO;
+import database.DatabaseHelper;
+import database.Candidate;
+import database.Vote;
 
 public class AdminViewVotes extends JFrame {
     private JPanel mainPanel;
@@ -320,47 +323,27 @@ public class AdminViewVotes extends JFrame {
         separator.setBounds(5, 29, 369, 1);
         candidatesPanel.add(separator);
         
-        // Candidate 1
-        JLabel candidate1 = new JLabel("Juan E. Dela Cruz");
-        candidate1.setFont(interRegular.deriveFont(14f));
-        candidate1.setForeground(new Color(1, 1, 1));
-        candidate1.setBounds(5, 28, 196, 28);
-        candidate1.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        candidate1.addMouseListener(new java.awt.event.MouseAdapter() {
-            @Override
-            public void mouseClicked(java.awt.event.MouseEvent e) {
-                selectCandidate(candidate1, "Juan E. Dela Cruz");
-            }
-        });
-        candidatesPanel.add(candidate1);
-        
-        // Candidate 2
-        JLabel candidate2 = new JLabel("Jack N. Jill");
-        candidate2.setFont(interRegular.deriveFont(14f));
-        candidate2.setForeground(new Color(1, 1, 1));
-        candidate2.setBounds(5, 47, 196, 28);
-        candidate2.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        candidate2.addMouseListener(new java.awt.event.MouseAdapter() {
-            @Override
-            public void mouseClicked(java.awt.event.MouseEvent e) {
-                selectCandidate(candidate2, "Jack N. Jill");
-            }
-        });
-        candidatesPanel.add(candidate2);
-        
-        // Candidate 3
-        JLabel candidate3 = new JLabel("Mang E. juan");
-        candidate3.setFont(interRegular.deriveFont(14f));
-        candidate3.setForeground(new Color(1, 1, 1));
-        candidate3.setBounds(5, 66, 196, 28);
-        candidate3.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        candidate3.addMouseListener(new java.awt.event.MouseAdapter() {
-            @Override
-            public void mouseClicked(java.awt.event.MouseEvent e) {
-                selectCandidate(candidate3, "Mang E. juan");
-            }
-        });
-        candidatesPanel.add(candidate3);
+        // Dynamically load candidates from database
+        java.util.List<Candidate> candidates = DatabaseHelper.readCandidates();
+        int yPos = 28;
+        for (Candidate c : candidates) {
+            JLabel candidateLabel = new JLabel(c.name);
+            candidateLabel.setFont(interRegular.deriveFont(14f));
+            candidateLabel.setForeground(new Color(1, 1, 1));
+            candidateLabel.setBounds(5, yPos, 196, 28);
+            candidateLabel.setCursor(new Cursor(Cursor.HAND_CURSOR));
+            
+            String candName = c.name;
+            candidateLabel.addMouseListener(new java.awt.event.MouseAdapter() {
+                @Override
+                public void mouseClicked(java.awt.event.MouseEvent e) {
+                    selectCandidate(candidateLabel, candName);
+                }
+            });
+            candidatesPanel.add(candidateLabel);
+            
+            yPos += 19;
+        }
         
         mainPanel.add(candidatesPanel);
         
@@ -441,47 +424,52 @@ public class AdminViewVotes extends JFrame {
         graphSeparator.setBounds(5, 29, 369, 1);
         votesGraphPanel.add(graphSeparator);
         
-        // Candidate 1 in graph
-        JLabel graphCandidate1 = new JLabel("Juan E. Dela Cruz");
-        graphCandidate1.setFont(interRegular.deriveFont(14f));
-        graphCandidate1.setForeground(new Color(1, 1, 1));
-        graphCandidate1.setBounds(5, 28, 196, 28);
-        votesGraphPanel.add(graphCandidate1);
+        // Dynamically load candidates and calculate vote counts
+        java.util.List<Candidate> graphCandidates = DatabaseHelper.readCandidates();
+        java.util.List<Vote> allVotes = DatabaseHelper.readVotes();
         
-        JLabel votes1 = new JLabel("34");
-        votes1.setFont(interRegular.deriveFont(14f));
-        votes1.setForeground(new Color(1, 1, 1));
-        votes1.setBounds(201, 28, 77, 28);
-        votes1.setHorizontalAlignment(SwingConstants.CENTER);
-        votesGraphPanel.add(votes1);
+        // Calculate total votes
+        int totalVotes = allVotes.size();
         
-        JLabel percentage1 = new JLabel("69.38%");
-        percentage1.setFont(interRegular.deriveFont(14f));
-        percentage1.setForeground(new Color(1, 1, 1));
-        percentage1.setBounds(278, 28, 96, 28);
-        percentage1.setHorizontalAlignment(SwingConstants.CENTER);
-        votesGraphPanel.add(percentage1);
-        
-        // Candidate 2 in graph
-        JLabel graphCandidate2 = new JLabel("Jack N. Jill");
-        graphCandidate2.setFont(interRegular.deriveFont(14f));
-        graphCandidate2.setForeground(new Color(1, 1, 1));
-        graphCandidate2.setBounds(5, 47, 196, 28);
-        votesGraphPanel.add(graphCandidate2);
-        
-        JLabel votes2 = new JLabel("15");
-        votes2.setFont(interRegular.deriveFont(14f));
-        votes2.setForeground(new Color(1, 1, 1));
-        votes2.setBounds(201, 47, 77, 28);
-        votes2.setHorizontalAlignment(SwingConstants.CENTER);
-        votesGraphPanel.add(votes2);
-        
-        JLabel percentage2 = new JLabel("30.61%");
-        percentage2.setFont(interRegular.deriveFont(14f));
-        percentage2.setForeground(new Color(1, 1, 1));
-        percentage2.setBounds(278, 47, 96, 28);
-        percentage2.setHorizontalAlignment(SwingConstants.CENTER);
-        votesGraphPanel.add(percentage2);
+        int graphYPos = 28;
+        for (Candidate c : graphCandidates) {
+            // Count votes for this candidate
+            int candidateVotes = 0;
+            for (Vote v : allVotes) {
+                if (v.candidate.equals(c.name)) {
+                    candidateVotes++;
+                }
+            }
+            
+            // Calculate percentage
+            double percentage = totalVotes > 0 ? (double) candidateVotes / totalVotes * 100 : 0;
+            String percentageStr = String.format("%.2f%%", percentage);
+            
+            // Candidate name
+            JLabel graphCandidate = new JLabel(c.name);
+            graphCandidate.setFont(interRegular.deriveFont(14f));
+            graphCandidate.setForeground(new Color(1, 1, 1));
+            graphCandidate.setBounds(5, graphYPos, 196, 28);
+            votesGraphPanel.add(graphCandidate);
+            
+            // Vote count
+            JLabel votes = new JLabel(String.valueOf(candidateVotes));
+            votes.setFont(interRegular.deriveFont(14f));
+            votes.setForeground(new Color(1, 1, 1));
+            votes.setBounds(201, graphYPos, 77, 28);
+            votes.setHorizontalAlignment(SwingConstants.CENTER);
+            votesGraphPanel.add(votes);
+            
+            // Percentage
+            JLabel percentageLabel = new JLabel(percentageStr);
+            percentageLabel.setFont(interRegular.deriveFont(14f));
+            percentageLabel.setForeground(new Color(1, 1, 1));
+            percentageLabel.setBounds(278, graphYPos, 96, 28);
+            percentageLabel.setHorizontalAlignment(SwingConstants.CENTER);
+            votesGraphPanel.add(percentageLabel);
+            
+            graphYPos += 19;
+        }
         
         mainPanel.add(votesGraphPanel);
         

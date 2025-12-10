@@ -1,5 +1,7 @@
 package admin;
 
+import database.DatabaseHelper;
+
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
@@ -228,6 +230,13 @@ public class AdminRemoveConfirmation extends JFrame {
         yesButton.setFocusPainted(false);
         yesButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
         yesButton.addActionListener(e -> {
+            // Delete candidate from database
+            boolean ok = DatabaseHelper.deleteCandidate(candidateName);
+            if (ok) {
+                JOptionPane.showMessageDialog(null, "Candidate '" + candidateName + "' removed successfully.", "Success", JOptionPane.INFORMATION_MESSAGE);
+            } else {
+                JOptionPane.showMessageDialog(null, "Failed to remove candidate from database.", "Error", JOptionPane.ERROR_MESSAGE);
+            }
             dispose();
         });
         mainPanel.add(yesButton);

@@ -1,5 +1,8 @@
 package admin;
 
+import database.DatabaseHelper;
+import database.Candidate;
+
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
@@ -231,53 +234,34 @@ public class AdminRemoveCandidate extends JFrame {
         separator.setBounds(5, 29, 369, 1); // Starting at 5px from left, width 369px
         candidatesPanel.add(separator);
         
-        // Candidate 1 - EXACT POSITION from Figma: x=28, y=185 (text starts at same y as separator)
-        JLabel candidate1 = new JLabel("Juan E. Dela Cruz");
-        candidate1.setFont(interRegular.deriveFont(14f));
-        candidate1.setForeground(new Color(1, 1, 1));
-        candidate1.setBounds(5, 28, 196, 28); // Same x-offset as header (5px)
-        candidate1.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        candidate1.setOpaque(true);
-        candidate1.setBackground(new Color(217, 217, 217));
-        candidate1.addMouseListener(new java.awt.event.MouseAdapter() {
-            @Override
-            public void mouseClicked(java.awt.event.MouseEvent e) {
-                selectCandidate(candidate1, "Juan E. Dela Cruz");
-            }
-        });
-        candidatesPanel.add(candidate1);
-        
-        // Candidate 2 - EXACT POSITION from Figma: x=28, y=204
-        JLabel candidate2 = new JLabel("Jack N. Jill");
-        candidate2.setFont(interRegular.deriveFont(14f));
-        candidate2.setForeground(new Color(1, 1, 1));
-        candidate2.setBounds(5, 47, 196, 28); // 19px below candidate1 (28 + 19 = 47)
-        candidate2.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        candidate2.setOpaque(true);
-        candidate2.setBackground(new Color(217, 217, 217));
-        candidate2.addMouseListener(new java.awt.event.MouseAdapter() {
-            @Override
-            public void mouseClicked(java.awt.event.MouseEvent e) {
-                selectCandidate(candidate2, "Jack N. Jill");
-            }
-        });
-        candidatesPanel.add(candidate2);
-        
-        // Candidate 3 - EXACT POSITION from Figma: x=28, y=223
-        JLabel candidate3 = new JLabel("Mang E. juan");
-        candidate3.setFont(interRegular.deriveFont(14f));
-        candidate3.setForeground(new Color(1, 1, 1));
-        candidate3.setBounds(5, 66, 196, 28); // 19px below candidate2 (47 + 19 = 66)
-        candidate3.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        candidate3.setOpaque(true);
-        candidate3.setBackground(new Color(217, 217, 217));
-        candidate3.addMouseListener(new java.awt.event.MouseAdapter() {
-            @Override
-            public void mouseClicked(java.awt.event.MouseEvent e) {
-                selectCandidate(candidate3, "Mang E. juan");
-            }
-        });
-        candidatesPanel.add(candidate3);
+        // Dynamically load candidates from database
+        java.util.List<Candidate> candidates = DatabaseHelper.readCandidates();
+        int yPos = 28;
+        for (Candidate c : candidates) {
+            JLabel candidateLabel = new JLabel(c.name);
+            candidateLabel.setFont(interRegular.deriveFont(14f));
+            candidateLabel.setForeground(new Color(1, 1, 1));
+            candidateLabel.setBounds(5, yPos, 196, 28);
+            candidateLabel.setCursor(new Cursor(Cursor.HAND_CURSOR));
+            candidateLabel.setOpaque(true);
+            candidateLabel.setBackground(new Color(217, 217, 217));
+            
+            // Capture the candidate data in the listener
+            String candName = c.name;
+            String candCourse = c.course;
+            String candPosition = c.position;
+            String candYear = c.year;
+            String candSection = c.section;
+            
+            candidateLabel.addMouseListener(new java.awt.event.MouseAdapter() {
+                @Override
+                public void mouseClicked(java.awt.event.MouseEvent e) {
+                    selectCandidateFromDB(candidateLabel, candName, candCourse, candPosition, candYear, candSection);
+                }
+            });
+            candidatesPanel.add(candidateLabel);
+            yPos += 19;
+        }
         
         mainPanel.add(candidatesPanel);
         
@@ -307,6 +291,10 @@ public class AdminRemoveCandidate extends JFrame {
         removeButton.setFocusPainted(false);
         removeButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
         removeButton.addActionListener((ActionEvent e) -> {
+            if (selectedCandidateName == null || selectedCandidateName.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Please select a candidate to remove.", "No selection", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
             // Open confirmation dialog with candidate name and position
             String position = positionLabel.getText().replace("Position: ", "");
             SwingUtilities.invokeLater(() -> new admin.AdminRemoveConfirmation(selectedCandidateName, position, AdminRemoveCandidate.this));
@@ -333,48 +321,29 @@ public class AdminRemoveCandidate extends JFrame {
         setVisible(true);
     }
     
-    // Method to handle candidate selection
-    private void selectCandidate(JLabel selectedLabel, String candidateName) {
+    // Method to handle candidate selection from database
+    private void selectCandidateFromDB(JLabel selectedLabel, String candidateName, String course, String position, String year, String section) {
         // Store the selected candidate name
         this.selectedCandidateName = candidateName;
         
         // Reset all candidates to default color
         for (Component comp : candidatesPanel.getComponents()) {
-            if (comp instanceof JLabel && comp != candidatesPanel.getComponent(0) && comp != candidatesPanel.getComponent(1)) {
-                ((JLabel) comp).setForeground(new Color(1, 1, 1));
+            if (comp instanceof JLabel) {
+                JLabel lab = (JLabel) comp;
+                if (!"Name".equals(lab.getText())) {
+                    lab.setForeground(new Color(1, 1, 1));
+                }
             }
         }
         
         // Highlight selected candidate
         selectedLabel.setForeground(new Color(72, 248, 254));
         
-        // Update candidate details based on selection
-        switch (candidateName) {
-            case "Juan E. Dela Cruz":
-                courseLabel.setText("Course: BSCS");
-                positionLabel.setText("Position: President");
-                yearLabel.setText("Year: 3rd");
-                sectionLabel.setText("Section: A");
-                break;
-            case "Jack N. Jill":
-                courseLabel.setText("Course: BSHM");
-                positionLabel.setText("Position: Vice President");
-                yearLabel.setText("Year: 2nd");
-                sectionLabel.setText("Section: B");
-                break;
-            case "Mang E. juan":
-                courseLabel.setText("Course: BSED");
-                positionLabel.setText("Position: Secretary");
-                yearLabel.setText("Year: 4th");
-                sectionLabel.setText("Section: C");
-                break;
-            default:
-                courseLabel.setText("Course: None");
-                positionLabel.setText("Position: None");
-                yearLabel.setText("Year: None");
-                sectionLabel.setText("Section: None");
-                break;
-        }
+        // Update candidate details
+        courseLabel.setText("Course: " + course);
+        positionLabel.setText("Position: " + position);
+        yearLabel.setText("Year: " + year);
+        sectionLabel.setText("Section: " + section);
     }
 
     public static void main(String[] args) {

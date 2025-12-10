@@ -1,5 +1,8 @@
 package admin;
 
+import database.DatabaseHelper;
+import database.Candidate;
+
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
@@ -355,68 +358,34 @@ public class AdminEditCandidates extends JFrame {
         separator.setBounds(5, 29, 369, 1);
         candidatesPanel.add(separator);
         
-        // Candidate 1
-        JLabel candidate1 = new JLabel("Juan E. Dela Cruz");
-        candidate1.setFont(interRegular.deriveFont(14f));
-        candidate1.setForeground(new Color(1, 1, 1));
-        candidate1.setBounds(5, 28, 196, 28);
-        candidate1.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        candidate1.addMouseListener(new java.awt.event.MouseAdapter() {
-            @Override
-            public void mouseClicked(java.awt.event.MouseEvent e) {
-                selectCandidate(candidate1, "Juan E. Dela Cruz", "Updated");
-            }
-        });
-        candidatesPanel.add(candidate1);
-        
-        JLabel status1 = new JLabel("Updated");
-        status1.setFont(interRegular.deriveFont(14f));
-        status1.setForeground(new Color(1, 1, 1));
-        status1.setBounds(280, 28, 89, 28);
-        status1.setHorizontalAlignment(SwingConstants.CENTER);
-        candidatesPanel.add(status1);
-        
-        // Candidate 2
-        JLabel candidate2 = new JLabel("Jack N. Jill");
-        candidate2.setFont(interRegular.deriveFont(14f));
-        candidate2.setForeground(new Color(1, 1, 1));
-        candidate2.setBounds(5, 47, 196, 28);
-        candidate2.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        candidate2.addMouseListener(new java.awt.event.MouseAdapter() {
-            @Override
-            public void mouseClicked(java.awt.event.MouseEvent e) {
-                selectCandidate(candidate2, "Jack N. Jill", "Original");
-            }
-        });
-        candidatesPanel.add(candidate2);
-        
-        JLabel status2 = new JLabel("Original");
-        status2.setFont(interRegular.deriveFont(14f));
-        status2.setForeground(new Color(1, 1, 1));
-        status2.setBounds(280, 47, 89, 28);
-        status2.setHorizontalAlignment(SwingConstants.CENTER);
-        candidatesPanel.add(status2);
-        
-        // Candidate 3
-        JLabel candidate3 = new JLabel("Mang E. juan");
-        candidate3.setFont(interRegular.deriveFont(14f));
-        candidate3.setForeground(new Color(1, 1, 1));
-        candidate3.setBounds(5, 66, 196, 28);
-        candidate3.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        candidate3.addMouseListener(new java.awt.event.MouseAdapter() {
-            @Override
-            public void mouseClicked(java.awt.event.MouseEvent e) {
-                selectCandidate(candidate3, "Mang E. juan", "Original");
-            }
-        });
-        candidatesPanel.add(candidate3);
-        
-        JLabel status3 = new JLabel("Original");
-        status3.setFont(interRegular.deriveFont(14f));
-        status3.setForeground(new Color(1, 1, 1));
-        status3.setBounds(280, 66, 89, 28);
-        status3.setHorizontalAlignment(SwingConstants.CENTER);
-        candidatesPanel.add(status3);
+        // Dynamically load candidates from database
+        java.util.List<Candidate> candidates = DatabaseHelper.readCandidates();
+        int yPos = 28;
+        for (Candidate c : candidates) {
+            JLabel candidateLabel = new JLabel(c.name);
+            candidateLabel.setFont(interRegular.deriveFont(14f));
+            candidateLabel.setForeground(new Color(1, 1, 1));
+            candidateLabel.setBounds(5, yPos, 196, 28);
+            candidateLabel.setCursor(new Cursor(Cursor.HAND_CURSOR));
+            
+            String candName = c.name;
+            candidateLabel.addMouseListener(new java.awt.event.MouseAdapter() {
+                @Override
+                public void mouseClicked(java.awt.event.MouseEvent e) {
+                    selectCandidate(candidateLabel, candName, "Updated");
+                }
+            });
+            candidatesPanel.add(candidateLabel);
+            
+            JLabel statusLabel = new JLabel("Updated");
+            statusLabel.setFont(interRegular.deriveFont(14f));
+            statusLabel.setForeground(new Color(1, 1, 1));
+            statusLabel.setBounds(280, yPos, 89, 28);
+            statusLabel.setHorizontalAlignment(SwingConstants.CENTER);
+            candidatesPanel.add(statusLabel);
+            
+            yPos += 19;
+        }
         
         mainPanel.add(candidatesPanel);
         
@@ -446,8 +415,49 @@ public class AdminEditCandidates extends JFrame {
         updateButton.setFocusPainted(false);
         updateButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
         updateButton.addActionListener((ActionEvent e) -> {
-            String position = (String) positionCombo.getSelectedItem();
-            SwingUtilities.invokeLater(() -> new admin.AdminEditConfirmation(selectedCandidateName, position, AdminEditCandidates.this));
+            if (selectedCandidateName == null || selectedCandidateName.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Please select a candidate to update.", "No selection", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+
+            String newName = nameField.getText().trim();
+            String newDesc = descriptionArea.getText().trim();
+            String newCourse = (String) coursesCombo.getSelectedItem();
+            String newPosition = (String) positionCombo.getSelectedItem();
+            String newYear = (String) yearCombo.getSelectedItem();
+            String newSection = (String) sectionCombo.getSelectedItem();
+
+            if (newName.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Candidate name cannot be empty.", "Validation Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            int confirm = JOptionPane.showConfirmDialog(this, "Save changes to candidate?", "Confirm Update", JOptionPane.YES_NO_OPTION);
+            if (confirm != JOptionPane.YES_OPTION) return;
+
+            Candidate updated = new Candidate(newName, newPosition, newCourse, newYear, newSection, newDesc);
+            boolean ok = DatabaseHelper.updateCandidate(selectedCandidateName, updated);
+            if (!ok) {
+                JOptionPane.showMessageDialog(this, "Could not find candidate in database. Update failed.", "Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            // Update label in UI candidates panel
+            for (Component comp : candidatesPanel.getComponents()) {
+                if (comp instanceof JLabel) {
+                    JLabel lab = (JLabel) comp;
+                    if (lab.getText().equals(selectedCandidateName)) {
+                        lab.setText(newName);
+                        lab.setForeground(new Color(72, 248, 254));
+                        break;
+                    }
+                }
+            }
+
+            // update selectedCandidateName to newName
+            selectedCandidateName = newName;
+
+            JOptionPane.showMessageDialog(this, "Candidate updated successfully.", "Success", JOptionPane.INFORMATION_MESSAGE);
         });
         mainPanel.add(updateButton);
         
@@ -492,32 +502,27 @@ public class AdminEditCandidates extends JFrame {
         // Highlight selected candidate
         selectedLabel.setForeground(new Color(72, 248, 254));
         
-        // Update form fields with candidate data
-        switch (candidateName) {
-            case "Juan E. Dela Cruz":
-                nameField.setText("Juan E. Dela Cruz");
-                descriptionArea.setText("President candidate with focus on academic excellence.");
-                coursesCombo.setSelectedItem("BSCS");
-                positionCombo.setSelectedItem("President");
-                yearCombo.setSelectedItem("3rd");
-                sectionCombo.setSelectedItem("A");
+        // Update form fields with candidate data from the database
+        java.util.List<Candidate> list = DatabaseHelper.readCandidates();
+        Candidate found = null;
+        for (Candidate c : list) {
+            if (c.name.equals(candidateName)) {
+                found = c;
                 break;
-            case "Jack N. Jill":
-                nameField.setText("Jack N. Jill");
-                descriptionArea.setText("Vice President candidate focusing on student welfare.");
-                coursesCombo.setSelectedItem("BSHM");
-                positionCombo.setSelectedItem("Vice President");
-                yearCombo.setSelectedItem("2nd");
-                sectionCombo.setSelectedItem("B");
-                break;
-            case "Mang E. juan":
-                nameField.setText("Mang E. juan");
-                descriptionArea.setText("Secretary candidate with campus development platform.");
-                coursesCombo.setSelectedItem("BSED");
-                positionCombo.setSelectedItem("Secretary");
-                yearCombo.setSelectedItem("4th");
-                sectionCombo.setSelectedItem("C");
-                break;
+            }
+        }
+
+        if (found != null) {
+            nameField.setText(found.name);
+            descriptionArea.setText(found.description == null ? "" : found.description);
+            coursesCombo.setSelectedItem(found.course == null || found.course.isEmpty() ? coursesCombo.getItemAt(0) : found.course);
+            positionCombo.setSelectedItem(found.position == null || found.position.isEmpty() ? positionCombo.getItemAt(0) : found.position);
+            yearCombo.setSelectedItem(found.year == null || found.year.isEmpty() ? yearCombo.getItemAt(0) : found.year);
+            sectionCombo.setSelectedItem(found.section == null || found.section.isEmpty() ? sectionCombo.getItemAt(0) : found.section);
+        } else {
+            // fallback to clearing or keeping previous values
+            nameField.setText(candidateName);
+            descriptionArea.setText("");
         }
     }
 
