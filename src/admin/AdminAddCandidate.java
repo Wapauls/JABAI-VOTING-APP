@@ -364,17 +364,14 @@ public class AdminAddCandidate extends JFrame {
         separatorLine.setOpaque(true);
         addedCandidatesPanel.add(separatorLine);
         
-        // Sample Candidate 1 with click functionality (EXACTLY like VotingPage)
-        JLabel candidate1 = createCandidateLabel("Juan E. Dela Cruz", 28);
-        addedCandidatesPanel.add(candidate1);
-        
-        // Sample Candidate 2 with click functionality (EXACTLY like VotingPage)
-        JLabel candidate2 = createCandidateLabel("Jack N. Jill", 47);
-        addedCandidatesPanel.add(candidate2);
-        
-        // Sample Candidate 3 with click functionality (EXACTLY like VotingPage)
-        JLabel candidate3 = createCandidateLabel("Mang E. juan", 66);
-        addedCandidatesPanel.add(candidate3);
+        // Load candidates from database instead of mock data
+        java.util.List<Candidate> candidates = DatabaseHelper.readCandidates();
+        nextCandidateY = 28; // Reset to starting position
+        for (Candidate c : candidates) {
+            JLabel candidateLabel = createCandidateLabel(c.name, nextCandidateY);
+            addedCandidatesPanel.add(candidateLabel);
+            nextCandidateY += 19;
+        }
         
         mainPanel.add(addedCandidatesPanel);
         

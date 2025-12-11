@@ -265,12 +265,13 @@ public class UserApp extends JFrame {
         statusGroup.add(noRadioButton);
         mainPanel.add(noRadioButton);
         
-        // Error Label (#e34949)
+        // Error Label (#e34949) - larger width and initially invisible
         errorLabel = new JLabel("Error Label");
         errorLabel.setFont(interRegular.deriveFont(16f));
         errorLabel.setForeground(new Color(227, 73, 73));
-        errorLabel.setBounds(141, 429, 141, 29);
+        errorLabel.setBounds(23, 429, 400, 29);
         errorLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        errorLabel.setVisible(false);
         mainPanel.add(errorLabel);
         
         // Proceed Button (#48f8fe background)
@@ -292,8 +293,10 @@ public class UserApp extends JFrame {
 
             if (name.isEmpty() || studentID.isEmpty() || email.isEmpty() || year.isEmpty() || section.isEmpty()) {
                 errorLabel.setText("Please fill all required fields.");
+                errorLabel.setVisible(true);
                 return;
             }
+            errorLabel.setVisible(false);
 
             // If voter exists, check if they've already voted
             if (database.DatabaseHelper.voterExists(studentID)) {

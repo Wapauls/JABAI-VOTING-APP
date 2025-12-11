@@ -389,6 +389,12 @@ public class AdminViewVotes extends JFrame {
         sectionCombo.setSelectedIndex(0);
         mainPanel.add(sectionCombo);
         
+        // Add action listeners to filter candidates based on selected filters
+        coursesCombo.addActionListener((ActionEvent e) -> filterAndDisplayCandidates());
+        positionCombo.addActionListener((ActionEvent e) -> filterAndDisplayCandidates());
+        yearCombo.addActionListener((ActionEvent e) -> filterAndDisplayCandidates());
+        sectionCombo.addActionListener((ActionEvent e) -> filterAndDisplayCandidates());
+        
         // Votes Graph Panel
         votesGraphPanel = new JPanel();
         votesGraphPanel.setLayout(null);
@@ -493,50 +499,140 @@ public class AdminViewVotes extends JFrame {
         setVisible(true);
     }
     
+    // Method to filter and display candidates based on selected filters
+    private void filterAndDisplayCandidates() {
+        String selectedCourse = (String) coursesCombo.getSelectedItem();
+        String selectedPosition = (String) positionCombo.getSelectedItem();
+        String selectedYear = (String) yearCombo.getSelectedItem();
+        String selectedSection = (String) sectionCombo.getSelectedItem();
+        
+        // Remove all candidate labels except header and separator
+        java.util.List<Component> toRemove = new java.util.ArrayList<>();
+        for (Component comp : candidatesPanel.getComponents()) {
+            if (comp instanceof JLabel) {
+                JLabel lbl = (JLabel) comp;
+                if (!"Name".equals(lbl.getText())) {
+                    toRemove.add(comp);
+                }
+            }
+        }
+        for (Component comp : toRemove) {
+            candidatesPanel.remove(comp);
+        }
+        
+        // Load all candidates from database
+        java.util.List<Candidate> candidates = DatabaseHelper.readCandidates();
+        int yPos = 28;
+        
+        // Filter and display candidates based on selected criteria
+        for (Candidate c : candidates) {
+            boolean matchesCourse = selectedCourse.equals("Select a Course") || c.course.equals(selectedCourse);
+            boolean matchesPosition = selectedPosition.equals("Select a Position") || c.position.equals(selectedPosition);
+            boolean matchesYear = selectedYear.equals("Select a Year") || c.year.equals(selectedYear);
+            boolean matchesSection = selectedSection.equals("Select a Section") || c.section.equals(selectedSection);
+            
+            if (matchesCourse && matchesPosition && matchesYear && matchesSection) {
+                JLabel candidateLabel = new JLabel(c.name);
+                candidateLabel.setFont(interRegular.deriveFont(14f));
+                candidateLabel.setForeground(new Color(1, 1, 1));
+                candidateLabel.setBounds(5, yPos, 196, 28);
+                candidateLabel.setCursor(new Cursor(Cursor.HAND_CURSOR));
+                
+                String candName = c.name;
+                candidateLabel.addMouseListener(new java.awt.event.MouseAdapter() {
+                    @Override
+                    public void mouseClicked(java.awt.event.MouseEvent e) {
+                        selectCandidate(candidateLabel, candName);
+                    }
+                });
+                candidatesPanel.add(candidateLabel);
+                yPos += 19;
+            }
+        }
+        
+        candidatesPanel.revalidate();
+        candidatesPanel.repaint();
+    }
+    
     // Method to handle candidate selection
     private void selectCandidate(JLabel selectedLabel, String candidateName) {
         // Reset all candidates to default color
         for (Component comp : candidatesPanel.getComponents()) {
-            if (comp instanceof JLabel && comp != candidatesPanel.getComponent(0) && comp != candidatesPanel.getComponent(1)) {
-                ((JLabel) comp).setForeground(new Color(1, 1, 1));
+            if (comp instanceof JLabel) {
+                JLabel lbl = (JLabel) comp;
+                if (!"Name".equals(lbl.getText())) {
+                    lbl.setForeground(new Color(1, 1, 1));
+                }
             }
         }
         
         // Highlight selected candidate
         selectedLabel.setForeground(new Color(72, 248, 254));
         
-        // Update candidate details
-        selectedCandidateLabel.setText("Selected Candidate: " + candidateName);
+        // Update candidate details from database
+        java.util.List<Candidate> candidates = DatabaseHelper.readCandidates();
+        java.util.List<Vote> allVotes = DatabaseHelper.readVotes();
         
-        switch (candidateName) {
-            case "Juan E. Dela Cruz":
-                courseLabel.setText("Course: BSCS");
-                positionLabel.setText("Position: President");
-                yearLabel.setText("Year: 3rd");
-                sectionLabel.setText("Section: A");
-                rankPositionLabel.setText("Currently Rank Position: 1st");
+        Candidate foundCandidate = null;
+        for (Candidate c : candidates) {
+            if (c.name.equals(candidateName)) {
+                foundCandidate = c;
                 break;
-            case "Jack N. Jill":
-                courseLabel.setText("Course: BSHM");
-                positionLabel.setText("Position: Vice President");
-                yearLabel.setText("Year: 2nd");
-                sectionLabel.setText("Section: B");
-                rankPositionLabel.setText("Currently Rank Position: 2nd");
-                break;
-            case "Mang E. juan":
-                courseLabel.setText("Course: BSED");
-                positionLabel.setText("Position: Secretary");
-                yearLabel.setText("Year: 4th");
-                sectionLabel.setText("Section: C");
-                rankPositionLabel.setText("Currently Rank Position: 3rd");
-                break;
-            default:
-                courseLabel.setText("Course: None");
-                positionLabel.setText("Position: None");
-                yearLabel.setText("Year: None");
-                sectionLabel.setText("Section: None");
-                rankPositionLabel.setText("Currently Rank Position: N/A");
-                break;
+            }
+        }
+        
+        if (foundCandidate != null) {
+            selectedCandidateLabel.setText("Selected Candidate: " + candidateName);
+            courseLabel.setText("Course: " + foundCandidate.course);
+            positionLabel.setText("Position: " + foundCandidate.position);
+            yearLabel.setText("Year: " + foundCandidate.year);
+            sectionLabel.setText("Section: " + foundCandidate.section);
+            
+            // Calculate rank position based on votes
+            int candidateVotes = 0;
+            for (Vote v : allVotes) {
+                if (v.candidate.equals(candidateName)) {
+                    candidateVotes++;
+                }
+            }
+            
+            // Count how many candidates have more votes
+            int rank = 1;
+            for (Candidate c : candidates) {
+                if (c.position.equals(foundCandidate.position)) {
+                    int otherVotes = 0;
+                    for (Vote v : allVotes) {
+                        if (v.candidate.equals(c.name)) {
+                            otherVotes++;
+                        }
+                    }
+                    if (otherVotes > candidateVotes) {
+                        rank++;
+                    }
+                }
+            }
+            
+            rankPositionLabel.setText("Currently Rank Position: " + getOrdinalSuffix(rank));
+        } else {
+            selectedCandidateLabel.setText("Selected Candidate: None");
+            courseLabel.setText("Course: None");
+            positionLabel.setText("Position: None");
+            yearLabel.setText("Year: None");
+            sectionLabel.setText("Section: None");
+            rankPositionLabel.setText("Currently Rank Position: N/A");
+        }
+    }
+    
+    // Helper method to convert rank number to ordinal (1st, 2nd, 3rd, 4th, etc.)
+    private String getOrdinalSuffix(int rank) {
+        if (rank >= 11 && rank <= 13) {
+            return rank + "th";
+        }
+        switch (rank % 10) {
+            case 1: return rank + "st";
+            case 2: return rank + "nd";
+            case 3: return rank + "rd";
+            default: return rank + "th";
         }
     }
 

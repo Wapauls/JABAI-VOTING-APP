@@ -243,8 +243,6 @@ public class AdminRemoveCandidate extends JFrame {
             candidateLabel.setForeground(new Color(1, 1, 1));
             candidateLabel.setBounds(5, yPos, 196, 28);
             candidateLabel.setCursor(new Cursor(Cursor.HAND_CURSOR));
-            candidateLabel.setOpaque(true);
-            candidateLabel.setBackground(new Color(217, 217, 217));
             
             // Capture the candidate data in the listener
             String candName = c.name;

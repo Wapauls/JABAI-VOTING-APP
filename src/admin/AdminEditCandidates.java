@@ -369,10 +369,15 @@ public class AdminEditCandidates extends JFrame {
             candidateLabel.setCursor(new Cursor(Cursor.HAND_CURSOR));
             
             String candName = c.name;
+            String candCourse = c.course;
+            String candPosition = c.position;
+            String candYear = c.year;
+            String candSection = c.section;
+            
             candidateLabel.addMouseListener(new java.awt.event.MouseAdapter() {
                 @Override
                 public void mouseClicked(java.awt.event.MouseEvent e) {
-                    selectCandidate(candidateLabel, candName, "Updated");
+                    selectCandidate(candidateLabel, candName, candCourse, candPosition, candYear, candSection);
                 }
             });
             candidatesPanel.add(candidateLabel);
@@ -482,20 +487,17 @@ public class AdminEditCandidates extends JFrame {
     }
     
     // Method to handle candidate selection
-    private void selectCandidate(JLabel selectedLabel, String candidateName, String status) {
+    private void selectCandidate(JLabel selectedLabel, String candidateName, String candCourse, String candPosition, String candYear, String candSection) {
         // Store the selected candidate name
         this.selectedCandidateName = candidateName;
         
         // Reset all candidates to default color
         for (Component comp : candidatesPanel.getComponents()) {
-            if (comp instanceof JLabel && 
-                comp != candidatesPanel.getComponent(0) && // Name header
-                comp != candidatesPanel.getComponent(1) && // Status header
-                comp != candidatesPanel.getComponent(2) && // Separator
-                comp != candidatesPanel.getComponent(4) && // Status 1
-                comp != candidatesPanel.getComponent(6) && // Status 2
-                comp != candidatesPanel.getComponent(8)) { // Status 3
-                ((JLabel) comp).setForeground(new Color(1, 1, 1));
+            if (comp instanceof JLabel) {
+                JLabel lab = (JLabel) comp;
+                if (!"Name".equals(lab.getText()) && !"Status".equals(lab.getText())) {
+                    lab.setForeground(new Color(1, 1, 1));
+                }
             }
         }
         

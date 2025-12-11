@@ -343,6 +343,12 @@ public class VotingPage extends JFrame {
         }
 
         mainPanel.add(sectionCombo);
+        
+        // Add action listeners to filter candidates based on selected filters
+        coursesCombo.addActionListener((ActionEvent e) -> filterAndDisplayCandidates());
+        positionCombo.addActionListener((ActionEvent e) -> filterAndDisplayCandidates());
+        yearCombo.addActionListener((ActionEvent e) -> filterAndDisplayCandidates());
+        sectionCombo.addActionListener((ActionEvent e) -> filterAndDisplayCandidates());
 
         // List of Candidates Label
         JLabel candidatesLabel = new JLabel("List of Candidates");
@@ -484,6 +490,59 @@ public class VotingPage extends JFrame {
         setVisible(true);
     }
 
+    // Method to filter and display candidates based on selected filters
+    private void filterAndDisplayCandidates() {
+        String selectedCourse = (String) coursesCombo.getSelectedItem();
+        String selectedPosition = (String) positionCombo.getSelectedItem();
+        String selectedYear = (String) yearCombo.getSelectedItem();
+        String selectedSection = (String) sectionCombo.getSelectedItem();
+        
+        // Remove all candidate labels except header and separator
+        java.util.List<Component> toRemove = new java.util.ArrayList<>();
+        for (Component comp : candidatesPanel.getComponents()) {
+            if (comp instanceof JLabel) {
+                JLabel lbl = (JLabel) comp;
+                if (!"Name".equals(lbl.getText())) {
+                    toRemove.add(comp);
+                }
+            }
+        }
+        for (Component comp : toRemove) {
+            candidatesPanel.remove(comp);
+        }
+        
+        // Load all candidates from database
+        java.util.List<Candidate> candidates = DatabaseHelper.readCandidates();
+        int yPos = 28;
+        
+        // Filter and display candidates based on selected criteria
+        for (Candidate c : candidates) {
+            boolean matchesCourse = selectedCourse.equals("Select a Course") || c.course.equals(selectedCourse);
+            boolean matchesPosition = selectedPosition.equals("Select a Position") || c.position.equals(selectedPosition);
+            boolean matchesYear = selectedYear.equals("Select a Year Level") || c.year.equals(selectedYear);
+            boolean matchesSection = selectedSection.equals("Select a Section") || c.section.equals(selectedSection);
+            
+            if (matchesCourse && matchesPosition && matchesYear && matchesSection) {
+                JLabel lbl = new JLabel(c.name);
+                lbl.setFont(interRegular.deriveFont(14f));
+                lbl.setForeground(new Color(1, 1, 1));
+                lbl.setBounds(5, yPos, 196, 28);
+                lbl.setCursor(new Cursor(Cursor.HAND_CURSOR));
+                lbl.addMouseListener(new java.awt.event.MouseAdapter() {
+                    @Override
+                    public void mouseClicked(java.awt.event.MouseEvent e) {
+                        selectCandidate(c.name, lbl);
+                    }
+                });
+                candidatesPanel.add(lbl);
+                yPos += 19;
+            }
+        }
+        
+        candidatesPanel.revalidate();
+        candidatesPanel.repaint();
+    }
+    
     // Method to handle candidate selection
     private void selectCandidate(String candidateName, JLabel candidateLabel) {
         selectedCandidateLabel.setText("Selected Candidate: " + candidateName);
