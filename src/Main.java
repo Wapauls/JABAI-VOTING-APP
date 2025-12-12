@@ -184,7 +184,7 @@ public class Main extends JFrame {
         
         voteAppButton.addActionListener((ActionEvent e) -> {
             // Navigate to UserApp (or VotingPage)
-            SwingUtilities.invokeLater(() -> new user.UserApp());
+            SwingUtilities.invokeLater(() -> new model.user.UserApp());
             dispose();
         });
         mainPanel.add(voteAppButton);
@@ -239,7 +239,7 @@ public class Main extends JFrame {
         
         adminAppButton.addActionListener((ActionEvent e) -> {
             // Navigate to Admin
-            SwingUtilities.invokeLater(() -> new admin.Admin());
+            SwingUtilities.invokeLater(() -> new model.admin.Admin());
             dispose();
         });
         mainPanel.add(adminAppButton);
