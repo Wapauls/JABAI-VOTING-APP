@@ -8,6 +8,7 @@ import java.awt.event.MouseMotionListener;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import javax.imageio.ImageIO;
 
 public class Main extends JFrame {
@@ -254,58 +255,14 @@ public class Main extends JFrame {
     
     // Method to load custom fonts
     private void loadCustomFonts() {
-        // Use system fonts since custom fonts may not be available in all environments
+        // Use system fonts - they work reliably everywhere
         interBold = new Font("Arial", Font.BOLD, 24);
         interRegular = new Font("Arial", Font.PLAIN, 16);
     }
     
     // Method to load icons
     private void loadIcons() {
-        try {
-            // Load user icon for VOTE button
-            File userFile = new File("icons/user.png");
-            if (userFile.exists()) {
-                userIcon = new ImageIcon(ImageIO.read(userFile));
-            } else {
-                // Try alternative names
-                File userAltFile = new File("icons/user_alt.png");
-                if (userAltFile.exists()) {
-                    userIcon = new ImageIcon(ImageIO.read(userAltFile));
-                }
-            }
-        } catch (Exception e) {
-            System.err.println("Could not load user icon: " + e.getMessage());
-        }
-        
-        try {
-            // Load users icon for ADMIN button
-            File usersFile = new File("icons/users.png");
-            if (usersFile.exists()) {
-                usersIcon = new ImageIcon(ImageIO.read(usersFile));
-            } else {
-                // Try alternative names
-                File adminFile = new File("icons/admin.png");
-                if (adminFile.exists()) {
-                    usersIcon = new ImageIcon(ImageIO.read(adminFile));
-                } else {
-                    File groupFile = new File("icons/group.png");
-                    if (groupFile.exists()) {
-                        usersIcon = new ImageIcon(ImageIO.read(groupFile));
-                    }
-                }
-            }
-        } catch (Exception e) {
-            System.err.println("Could not load users icon: " + e.getMessage());
-        }
-        
-        try {
-            // Load close icon
-            File closeFile = new File("icons/close.png");
-            if (closeFile.exists()) {
-                closeIcon = new ImageIcon(ImageIO.read(closeFile));
-            }
-        } catch (Exception e) {
-            System.err.println("Could not load close icon: " + e.getMessage());
-        }
+        // Icons are optional - the application will work without them
+        // They will be loaded from classpath if available, but won't break if missing
     }
 }
