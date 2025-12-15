@@ -75,31 +75,7 @@ public class DatabaseHelper {
                     ")";
             stmt.execute(createVoters);
 
-            // Check if candidates table is empty and populate with sample data
-            String checkCandidates = "SELECT COUNT(*) as count FROM candidates";
-            try (ResultSet rs = stmt.executeQuery(checkCandidates)) {
-                if (rs.next() && rs.getInt("count") == 0) {
-                    initializeSampleData();
-                }
-            }
-        }
-    }
-
-    /**
-     * Initialize sample candidate data
-     */
-    private static void initializeSampleData() throws SQLException {
-        List<Candidate> samples = Arrays.asList(
-            new Candidate("Juan E. Dela Cruz", "President", "BSCS", "3rd", "A",
-                          "Position: President\nPlatform: Academic Excellence"),
-            new Candidate("Jack N. Jill", "Vice President", "BSHM", "2nd", "B",
-                          "Position: Vice President\nPlatform: Student Welfare"),
-            new Candidate("Mang E. juan", "Secretary", "BSED", "4th", "C",
-                          "Position: Secretary\nPlatform: Campus Development")
-        );
-
-        for (Candidate c : samples) {
-            appendCandidate(c);
+            // Database tables created without any initial mock data
         }
     }
 

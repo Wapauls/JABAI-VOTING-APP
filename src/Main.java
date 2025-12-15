@@ -254,25 +254,9 @@ public class Main extends JFrame {
     
     // Method to load custom fonts
     private void loadCustomFonts() {
-        try {
-            // Load Inter Bold font
-            File boldFontFile = new File("fonts/Inter-Bold.otf");
-            interBold = Font.createFont(Font.TRUETYPE_FONT, boldFontFile).deriveFont(24f);
-            GraphicsEnvironment.getLocalGraphicsEnvironment().registerFont(interBold);
-        } catch (IOException | FontFormatException e) {
-            System.err.println("Could not load Inter Bold font: " + e.getMessage());
-            interBold = new Font("Arial", Font.BOLD, 24);
-        }
-        
-        try {
-            // Load Inter Regular font
-            File regularFontFile = new File("fonts/Inter-Regular.otf");
-            interRegular = Font.createFont(Font.TRUETYPE_FONT, regularFontFile).deriveFont(16f);
-            GraphicsEnvironment.getLocalGraphicsEnvironment().registerFont(interRegular);
-        } catch (IOException | FontFormatException e) {
-            System.err.println("Could not load Inter Regular font: " + e.getMessage());
-            interRegular = new Font("Arial", Font.PLAIN, 16);
-        }
+        // Use system fonts since custom fonts may not be available in all environments
+        interBold = new Font("Arial", Font.BOLD, 24);
+        interRegular = new Font("Arial", Font.PLAIN, 16);
     }
     
     // Method to load icons

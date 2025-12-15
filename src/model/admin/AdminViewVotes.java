@@ -480,7 +480,7 @@ public class AdminViewVotes extends JFrame {
         mainPanel.add(votesGraphPanel);
         
         // Back Button - exact design
-        backButton = new JButton("← Back");
+        backButton = new JButton("< Back");
         backButton.setBounds(724, 477, 58, 22);
         backButton.setBackground(new Color(20, 20, 20));
         backButton.setForeground(new Color(255, 59, 59));
