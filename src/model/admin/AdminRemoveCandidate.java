@@ -289,12 +289,7 @@ public class AdminRemoveCandidate extends JFrame {
         removeButton.setFocusPainted(false);
         removeButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
         removeButton.addActionListener((ActionEvent e) -> {
-            if (selectedCandidateName == null || selectedCandidateName.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "Please select a candidate to remove.", "No selection", JOptionPane.WARNING_MESSAGE);
-                return;
-            }
-            // Open confirmation dialog with candidate name and position
-            String position = positionLabel.getText().replace("Position: ", "");
+
             SwingUtilities.invokeLater(() -> new model.admin.AdminRemoveConfirmation(selectedCandidateName, position, AdminRemoveCandidate.this));
         });
         mainPanel.add(removeButton);

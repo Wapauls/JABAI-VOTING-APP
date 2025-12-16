@@ -401,7 +401,6 @@ public class AdminAddCandidate extends JFrame {
         addButton.setFocusPainted(false);
         addButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
         addButton.addActionListener((ActionEvent e) -> {
-            addCandidate();
         });
         mainPanel.add(addButton);
         
@@ -467,37 +466,6 @@ public class AdminAddCandidate extends JFrame {
         String year = (String) yearCombo.getSelectedItem();
         String section = (String) sectionCombo.getSelectedItem();
         
-        // Validate inputs
-        if (name.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Please enter a name for the candidate.", 
-                                        "Validation Error", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-        
-        if (course.equals("Select a Course")) {
-            JOptionPane.showMessageDialog(this, "Please select a course.", 
-                                        "Validation Error", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-        
-        if (position.equals("Select a Position")) {
-            JOptionPane.showMessageDialog(this, "Please select a position.", 
-                                        "Validation Error", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-        
-        if (year.equals("Select a Year Level")) {
-            JOptionPane.showMessageDialog(this, "Please select a year level.", 
-                                        "Validation Error", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-        
-        if (section.equals("Select a Section")) {
-            JOptionPane.showMessageDialog(this, "Please select a section.", 
-                                        "Validation Error", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-        
         // Calculate position for new candidate
         int newCandidateY = nextCandidateY;
         nextCandidateY += 28; // Use full height (28) for each candidate
@@ -523,22 +491,6 @@ public class AdminAddCandidate extends JFrame {
             ex.printStackTrace();
             JOptionPane.showMessageDialog(this, "Warning: could not persist candidate to database.", "Warning", JOptionPane.WARNING_MESSAGE);
         }
-        
-        // Show success message
-        String message = String.format(
-            "Candidate Added Successfully!\n\n" +
-            "Name: %s\n" +
-            "Position: %s\n" +
-            "Course: %s\n" +
-            "Year: %s\n" +
-            "Section: %s\n\n" +
-            "Description: %s",
-            name, position, course, year, section, 
-            (description.length() > 100 ? description.substring(0, 100) + "..." : description)
-        );
-        
-        JOptionPane.showMessageDialog(this, message, 
-                                    "Success", JOptionPane.INFORMATION_MESSAGE);
         
         // Clear form fields
         nameField.setText("");

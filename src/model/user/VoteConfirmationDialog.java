@@ -106,11 +106,7 @@ public class VoteConfirmationDialog extends JFrame {
         }
     }
 
-    public VoteConfirmationDialog(String candidateName, String position, JFrame votingPageFrame, String studentID) {
-        this.candidateName = candidateName;
-        this.position = position;
-        this.votingPageFrame = votingPageFrame;
-        this.studentID = studentID;
+    public VoteConfirmationDialog() {
         
         setTitle("Voting System");
         setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
@@ -211,18 +207,6 @@ public class VoteConfirmationDialog extends JFrame {
         yesButton.setFocusPainted(false);
         yesButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
         yesButton.addActionListener(e -> {
-            // Record vote in text database
-            try {
-                Vote v = DatabaseHelper.makeVote(candidateName, position, "", "", "");
-                DatabaseHelper.recordVote(v);
-                // If we have a studentID, mark the voter as having voted
-                if (studentID != null && !studentID.isEmpty()) {
-                    DatabaseHelper.markVoterAsVoted(studentID);
-                }
-            } catch (Exception ex) {
-                ex.printStackTrace();
-            }
-
             // Re-open Vote History Page
             SwingUtilities.invokeLater(() -> new model.user.VoteHistoryPage());
 
@@ -257,7 +241,7 @@ public class VoteConfirmationDialog extends JFrame {
     }
 
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> new model.user.VoteConfirmationDialog("Test Candidate", "President", null, null));
+        SwingUtilities.invokeLater(() -> new model.user.VoteConfirmationDialog());
     }
     
     // Method to load custom fonts
