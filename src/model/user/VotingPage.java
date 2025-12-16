@@ -414,7 +414,7 @@ public class VotingPage extends JFrame {
         mainPanel.add(descriptionLabel);
 
         // Description Area (exact text from design)
-        descriptionArea = new JTextArea("Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus nec lacinia magna, vitae maximus lacus.");
+        descriptionArea = new JTextArea("");
         descriptionArea.setBounds(540, 291, 276, 140);
         descriptionArea.setBackground(new Color(20, 20, 20));
         descriptionArea.setForeground(Color.WHITE);
@@ -451,9 +451,7 @@ public class VotingPage extends JFrame {
         voteButton.setFocusPainted(false);
         voteButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
         voteButton.addActionListener((ActionEvent e) -> {
-            String candidate = selectedCandidateLabel.getText().replace("Selected Candidate: ", "");
-            String position = (String) positionCombo.getSelectedItem();
-            SwingUtilities.invokeLater(() -> new model.user.VoteConfirmationDialog(candidate, position, VotingPage.this, currentStudentID));
+            SwingUtilities.invokeLater(() -> new VoteConfirmationDialog());
         });
         mainPanel.add(voteButton);
 
