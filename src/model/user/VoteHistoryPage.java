@@ -151,12 +151,12 @@ public class VoteHistoryPage extends JFrame {
         voteHistoryLabel.setBounds(29, 112, 154, 29);
         mainPanel.add(voteHistoryLabel);
         
-        // Candidates Panel (Vote History Table)
-        JPanel candidatesPanel = new JPanel();
-        candidatesPanel.setLayout(null);
-        candidatesPanel.setBounds(23, 146, 794, 304);
-        candidatesPanel.setBackground(new Color(217, 217, 217));
-        candidatesPanel.setBorder(BorderFactory.createLineBorder(new Color(180, 180, 180), 1));
+        // Fixed header panel
+        JPanel headerPanel = new JPanel();
+        headerPanel.setLayout(null);
+        headerPanel.setBackground(new Color(217, 217, 217));
+        headerPanel.setBounds(23, 146, 794, 31);
+        headerPanel.setBorder(BorderFactory.createLineBorder(new Color(180, 180, 180), 1));
         
         // Table Headers
         JLabel nameHeader = new JLabel("Name");
@@ -164,46 +164,54 @@ public class VoteHistoryPage extends JFrame {
         nameHeader.setForeground(new Color(1, 1, 1));
         nameHeader.setBounds(33, 5, 94, 24);
         nameHeader.setHorizontalAlignment(SwingConstants.CENTER);
-        candidatesPanel.add(nameHeader);
+        headerPanel.add(nameHeader);
         
         JLabel positionHeader = new JLabel("Position");
         positionHeader.setFont(interRegular.deriveFont(14f));
         positionHeader.setForeground(new Color(1, 1, 1));
         positionHeader.setBounds(239, 5, 179, 24);
         positionHeader.setHorizontalAlignment(SwingConstants.CENTER);
-        candidatesPanel.add(positionHeader);
+        headerPanel.add(positionHeader);
         
         JLabel yearHeader = new JLabel("Year");
         yearHeader.setFont(interRegular.deriveFont(14f));
         yearHeader.setForeground(new Color(1, 1, 1));
         yearHeader.setBounds(418, 5, 101, 24);
         yearHeader.setHorizontalAlignment(SwingConstants.CENTER);
-        candidatesPanel.add(yearHeader);
+        headerPanel.add(yearHeader);
         
         JLabel sectionHeader = new JLabel("Section");
         sectionHeader.setFont(interRegular.deriveFont(14f));
         sectionHeader.setForeground(new Color(1, 1, 1));
         sectionHeader.setBounds(519, 5, 130, 24);
         sectionHeader.setHorizontalAlignment(SwingConstants.CENTER);
-        candidatesPanel.add(sectionHeader);
+        headerPanel.add(sectionHeader);
         
         JLabel dateHeader = new JLabel("Date");
         dateHeader.setFont(interRegular.deriveFont(14f));
         dateHeader.setForeground(new Color(1, 1, 1));
         dateHeader.setBounds(649, 5, 158, 24);
         dateHeader.setHorizontalAlignment(SwingConstants.CENTER);
-        candidatesPanel.add(dateHeader);
+        headerPanel.add(dateHeader);
         
         // Separator line
         JSeparator separator = new JSeparator();
         separator.setBackground(new Color(97, 97, 97));
         separator.setForeground(new Color(97, 97, 97));
         separator.setBounds(10, 30, 774, 1);
-        candidatesPanel.add(separator);
+        headerPanel.add(separator);
+        
+        mainPanel.add(headerPanel);
+        
+        // Candidates content panel (for scrolling)
+        JPanel candidatesPanel = new JPanel();
+        candidatesPanel.setLayout(null);
+        candidatesPanel.setBackground(new Color(217, 217, 217));
+        candidatesPanel.setPreferredSize(new Dimension(774, 1));
         
         // Dynamically load votes from database
         java.util.List<Vote> votes = DatabaseHelper.readVotes();
-        int yPos = 34;
+        int yPos = 0;
         for (Vote v : votes) {
             // Extract date from ISO timestamp (first 10 chars: YYYY-MM-DD)
             String dateStr = v.timestamp.length() >= 10 ? v.timestamp.substring(0, 10) : v.timestamp;
@@ -244,8 +252,18 @@ public class VoteHistoryPage extends JFrame {
             
             yPos += 24;
         }
+        // Set preferred size based on number of votes
+        if (yPos > 0) {
+            candidatesPanel.setPreferredSize(new Dimension(774, yPos));
+        }
         
-        mainPanel.add(candidatesPanel);
+        // Wrap only content in scroll pane (header is fixed above)
+        JScrollPane candidatesScrollPane = new JScrollPane(candidatesPanel);
+        candidatesScrollPane.setBounds(23, 177, 794, 273);
+        candidatesScrollPane.setBorder(BorderFactory.createEmptyBorder());
+        candidatesScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+        candidatesScrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        mainPanel.add(candidatesScrollPane);
         
         // Vote Again Button (#48f8fe background) - exact design
         voteAgainButton = new JButton() {
@@ -280,7 +298,7 @@ public class VoteHistoryPage extends JFrame {
         mainPanel.add(voteAgainButton);
         
         // Back Button - exact design
-        backButton = new JButton("< Back");
+        backButton = new JButton("← Back");
         backButton.setBounds(754, 477, 58, 22);
         backButton.setBackground(new Color(20, 20, 20));
         backButton.setForeground(new Color(255, 59, 59));

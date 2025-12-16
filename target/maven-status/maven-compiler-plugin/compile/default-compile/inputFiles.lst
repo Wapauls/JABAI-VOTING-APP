@@ -1,16 +1,20 @@
-C:\Users\JP Galano\Downloads\java\JABAI-VOTING-APP\src\Main.java
-C:\Users\JP Galano\Downloads\java\JABAI-VOTING-APP\src\model\admin\AdminAddCandidate.java
-C:\Users\JP Galano\Downloads\java\JABAI-VOTING-APP\src\model\user\UserApp.java
-C:\Users\JP Galano\Downloads\java\JABAI-VOTING-APP\src\model\admin\AdminRemoveCandidate.java
-C:\Users\JP Galano\Downloads\java\JABAI-VOTING-APP\src\model\admin\Admin.java
-C:\Users\JP Galano\Downloads\java\JABAI-VOTING-APP\src\connectionDB\Vote.java
-C:\Users\JP Galano\Downloads\java\JABAI-VOTING-APP\src\model\user\VoteHistoryPage.java
-C:\Users\JP Galano\Downloads\java\JABAI-VOTING-APP\src\model\admin\AdminEditConfirmation.java
-C:\Users\JP Galano\Downloads\java\JABAI-VOTING-APP\src\connectionDB\Voter.java
-C:\Users\JP Galano\Downloads\java\JABAI-VOTING-APP\src\connectionDB\Candidate.java
-C:\Users\JP Galano\Downloads\java\JABAI-VOTING-APP\src\model\user\VotingPage.java
-C:\Users\JP Galano\Downloads\java\JABAI-VOTING-APP\src\model\admin\AdminEditCandidates.java
-C:\Users\JP Galano\Downloads\java\JABAI-VOTING-APP\src\model\admin\AdminViewVotes.java
-C:\Users\JP Galano\Downloads\java\JABAI-VOTING-APP\src\model\admin\AdminRemoveConfirmation.java
-C:\Users\JP Galano\Downloads\java\JABAI-VOTING-APP\src\connectionDB\DatabaseHelper.java
-C:\Users\JP Galano\Downloads\java\JABAI-VOTING-APP\src\model\user\VoteConfirmationDialog.java
+C:\Users\Dominic\Desktop\Folders\UPDATED VOTING APP\JABAI-VOTING-APP\src\model\user\VoteHistoryPage.java
+C:\Users\Dominic\Desktop\Folders\UPDATED VOTING APP\JABAI-VOTING-APP\src\model\user\MessageDialog.java
+C:\Users\Dominic\Desktop\Folders\UPDATED VOTING APP\JABAI-VOTING-APP\src\model\admin\AdminEditConfirmation.java
+C:\Users\Dominic\Desktop\Folders\UPDATED VOTING APP\JABAI-VOTING-APP\src\Main.java
+C:\Users\Dominic\Desktop\Folders\UPDATED VOTING APP\JABAI-VOTING-APP\src\model\user\UserApp.java
+C:\Users\Dominic\Desktop\Folders\UPDATED VOTING APP\JABAI-VOTING-APP\src\utils\ResourceLoader.java
+C:\Users\Dominic\Desktop\Folders\UPDATED VOTING APP\JABAI-VOTING-APP\src\model\user\VoteConfirmationDialog.java
+C:\Users\Dominic\Desktop\Folders\UPDATED VOTING APP\JABAI-VOTING-APP\src\connectionDB\Vote.java
+C:\Users\Dominic\Desktop\Folders\UPDATED VOTING APP\JABAI-VOTING-APP\src\model\admin\AdminAddCandidate.java
+C:\Users\Dominic\Desktop\Folders\UPDATED VOTING APP\JABAI-VOTING-APP\src\connectionDB\Candidate.java
+C:\Users\Dominic\Desktop\Folders\UPDATED VOTING APP\JABAI-VOTING-APP\src\model\admin\AdminEditCandidates.java
+C:\Users\Dominic\Desktop\Folders\UPDATED VOTING APP\JABAI-VOTING-APP\src\model\user\VotingPage.java
+C:\Users\Dominic\Desktop\Folders\UPDATED VOTING APP\JABAI-VOTING-APP\src\model\admin\AdminViewVotes.java
+C:\Users\Dominic\Desktop\Folders\UPDATED VOTING APP\JABAI-VOTING-APP\src\TestResources.java
+C:\Users\Dominic\Desktop\Folders\UPDATED VOTING APP\JABAI-VOTING-APP\src\connectionDB\DatabaseHelper.java
+C:\Users\Dominic\Desktop\Folders\UPDATED VOTING APP\JABAI-VOTING-APP\src\model\admin\Admin.java
+C:\Users\Dominic\Desktop\Folders\UPDATED VOTING APP\JABAI-VOTING-APP\src\model\admin\AdminRemoveCandidate.java
+C:\Users\Dominic\Desktop\Folders\UPDATED VOTING APP\JABAI-VOTING-APP\src\model\admin\AdminRemoveConfirmation.java
+C:\Users\Dominic\Desktop\Folders\UPDATED VOTING APP\JABAI-VOTING-APP\src\connectionDB\Voter.java
+C:\Users\Dominic\Desktop\Folders\UPDATED VOTING APP\JABAI-VOTING-APP\src\model\admin\AdminMessageDialog.java

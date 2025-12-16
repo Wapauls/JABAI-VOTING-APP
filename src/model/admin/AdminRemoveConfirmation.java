@@ -233,9 +233,9 @@ public class AdminRemoveConfirmation extends JFrame {
             // Delete candidate from database
             boolean ok = DatabaseHelper.deleteCandidate(candidateName);
             if (ok) {
-                JOptionPane.showMessageDialog(null, "Candidate '" + candidateName + "' removed successfully.", "Success", JOptionPane.INFORMATION_MESSAGE);
+                new AdminMessageDialog("Success", "Candidate '" + candidateName + "' removed successfully.", AdminMessageDialog.INFO);
             } else {
-                JOptionPane.showMessageDialog(null, "Failed to remove candidate from database.", "Error", JOptionPane.ERROR_MESSAGE);
+                new AdminMessageDialog("Error", "Failed to remove candidate from database.", AdminMessageDialog.ERROR);
             }
             dispose();
         });

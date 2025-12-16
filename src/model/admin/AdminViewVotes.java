@@ -302,11 +302,11 @@ public class AdminViewVotes extends JFrame {
         candidatesLabel.setBounds(23, 187, 219, 28);
         mainPanel.add(candidatesLabel);
         
-        // Candidates Panel
-        candidatesPanel = new JPanel();
-        candidatesPanel.setLayout(null);
-        candidatesPanel.setBounds(23, 223, 379, 133);
-        candidatesPanel.setBackground(new Color(217, 217, 217));
+        // Fixed header panel
+        JPanel headerPanel = new JPanel();
+        headerPanel.setLayout(null);
+        headerPanel.setBackground(new Color(217, 217, 217));
+        headerPanel.setBounds(23, 223, 379, 30);
         
         // Candidate header
         JLabel nameHeader = new JLabel("Name");
@@ -314,18 +314,26 @@ public class AdminViewVotes extends JFrame {
         nameHeader.setForeground(new Color(1, 1, 1));
         nameHeader.setBounds(5, 0, 45, 28);
         nameHeader.setHorizontalAlignment(SwingConstants.CENTER);
-        candidatesPanel.add(nameHeader);
+        headerPanel.add(nameHeader);
         
         // Separator line
         JSeparator separator = new JSeparator();
         separator.setBackground(new Color(97, 97, 97));
         separator.setForeground(new Color(97, 97, 97));
         separator.setBounds(5, 29, 369, 1);
-        candidatesPanel.add(separator);
+        headerPanel.add(separator);
+        
+        mainPanel.add(headerPanel);
+        
+        // Candidates content panel (for scrolling)
+        candidatesPanel = new JPanel();
+        candidatesPanel.setLayout(null);
+        candidatesPanel.setBackground(new Color(217, 217, 217));
+        candidatesPanel.setPreferredSize(new Dimension(369, 1));
         
         // Dynamically load candidates from database
         java.util.List<Candidate> candidates = DatabaseHelper.readCandidates();
-        int yPos = 28;
+        int yPos = 0;
         for (Candidate c : candidates) {
             JLabel candidateLabel = new JLabel(c.name);
             candidateLabel.setFont(interRegular.deriveFont(14f));
@@ -344,8 +352,18 @@ public class AdminViewVotes extends JFrame {
             
             yPos += 19;
         }
+        // Set preferred size based on number of candidates
+        if (yPos > 0) {
+            candidatesPanel.setPreferredSize(new Dimension(369, yPos));
+        }
         
-        mainPanel.add(candidatesPanel);
+        // Wrap only content in scroll pane (header is fixed above)
+        JScrollPane candidatesScrollPane = new JScrollPane(candidatesPanel);
+        candidatesScrollPane.setBounds(23, 253, 379, 103);
+        candidatesScrollPane.setBorder(BorderFactory.createEmptyBorder());
+        candidatesScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+        candidatesScrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        mainPanel.add(candidatesScrollPane);
         
         // Sort Label
         JLabel sortLabel = new JLabel("Sort");
@@ -480,7 +498,7 @@ public class AdminViewVotes extends JFrame {
         mainPanel.add(votesGraphPanel);
         
         // Back Button - exact design
-        backButton = new JButton("< Back");
+        backButton = new JButton("← Back");
         backButton.setBounds(724, 477, 58, 22);
         backButton.setBackground(new Color(20, 20, 20));
         backButton.setForeground(new Color(255, 59, 59));

@@ -31,6 +31,7 @@ public class AdminRemoveCandidate extends JFrame {
     private JLabel yearLabel;
     private JLabel sectionLabel;
     private String selectedCandidateName = "";
+    private String selectedCandidatePosition = "";
     
     // For dragging
     private int dragX = 0;
@@ -213,30 +214,38 @@ public class AdminRemoveCandidate extends JFrame {
         candidatesLabel.setBounds(23, 121, 219, 28);
         mainPanel.add(candidatesLabel);
         
-        // Candidates Panel - EXACT POSITION from Figma: x=23, y=157, width=379, height=346
-        candidatesPanel = new JPanel();
-        candidatesPanel.setLayout(null);
-        candidatesPanel.setBounds(23, 157, 379, 346);
-        candidatesPanel.setBackground(new Color(217, 217, 217));
+        // Fixed header panel
+        JPanel headerPanel = new JPanel();
+        headerPanel.setLayout(null);
+        headerPanel.setBackground(new Color(217, 217, 217));
+        headerPanel.setBounds(23, 157, 379, 30);
         
-        // Candidate header - EXACT POSITION from Figma: x=28, y=157
+        // Candidate header
         JLabel nameHeader = new JLabel("Name");
         nameHeader.setFont(interRegular.deriveFont(14f));
         nameHeader.setForeground(new Color(1, 1, 1));
-        nameHeader.setBounds(5, 0, 45, 28); // Offset from panel edge: 5px from left
+        nameHeader.setBounds(5, 0, 45, 28);
         nameHeader.setHorizontalAlignment(SwingConstants.CENTER);
-        candidatesPanel.add(nameHeader);
+        headerPanel.add(nameHeader);
         
-        // Separator line - EXACT POSITION from Figma: x=28, y=186
+        // Separator line
         JSeparator separator = new JSeparator();
         separator.setBackground(new Color(97, 97, 97));
         separator.setForeground(new Color(97, 97, 97));
-        separator.setBounds(5, 29, 369, 1); // Starting at 5px from left, width 369px
-        candidatesPanel.add(separator);
+        separator.setBounds(5, 29, 369, 1);
+        headerPanel.add(separator);
+        
+        mainPanel.add(headerPanel);
+        
+        // Candidates content panel (for scrolling)
+        candidatesPanel = new JPanel();
+        candidatesPanel.setLayout(null);
+        candidatesPanel.setBackground(new Color(217, 217, 217));
+        candidatesPanel.setPreferredSize(new Dimension(369, 1));
         
         // Dynamically load candidates from database
         java.util.List<Candidate> candidates = DatabaseHelper.readCandidates();
-        int yPos = 28;
+        int yPos = 0;
         for (Candidate c : candidates) {
             JLabel candidateLabel = new JLabel(c.name);
             candidateLabel.setFont(interRegular.deriveFont(14f));
@@ -260,8 +269,18 @@ public class AdminRemoveCandidate extends JFrame {
             candidatesPanel.add(candidateLabel);
             yPos += 19;
         }
+        // Set preferred size based on number of candidates
+        if (yPos > 0) {
+            candidatesPanel.setPreferredSize(new Dimension(369, yPos));
+        }
         
-        mainPanel.add(candidatesPanel);
+        // Wrap only content in scroll pane (header is fixed above)
+        JScrollPane candidatesScrollPane = new JScrollPane(candidatesPanel);
+        candidatesScrollPane.setBounds(23, 187, 379, 316);
+        candidatesScrollPane.setBorder(BorderFactory.createEmptyBorder());
+        candidatesScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+        candidatesScrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        mainPanel.add(candidatesScrollPane);
         
         // Remove Button (#ff2222 background)
         removeButton = new JButton() {
@@ -290,12 +309,16 @@ public class AdminRemoveCandidate extends JFrame {
         removeButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
         removeButton.addActionListener((ActionEvent e) -> {
 
-            SwingUtilities.invokeLater(() -> new model.admin.AdminRemoveConfirmation(selectedCandidateName, position, AdminRemoveCandidate.this));
+            SwingUtilities.invokeLater(() -> new AdminRemoveConfirmation(
+                selectedCandidateName,
+                selectedCandidatePosition,
+                AdminRemoveCandidate.this
+            ));
         });
         mainPanel.add(removeButton);
         
         // Back Button - exact design
-        backButton = new JButton("< Back");
+        backButton = new JButton("← Back");
         backButton.setBounds(724, 477, 58, 22);
         backButton.setBackground(new Color(20, 20, 20));
         backButton.setForeground(new Color(255, 59, 59));
@@ -315,11 +338,18 @@ public class AdminRemoveCandidate extends JFrame {
     }
     
     // Method to handle candidate selection from database
-    private void selectCandidateFromDB(JLabel selectedLabel, String candidateName, String course, String position, String year, String section) {
-        // Store the selected candidate name
+    private void selectCandidateFromDB(
+            JLabel selectedLabel,
+            String candidateName,
+            String course,
+            String position,
+            String year,
+            String section
+    ) {
         this.selectedCandidateName = candidateName;
-        
-        // Reset all candidates to default color
+        this.selectedCandidatePosition = position; // ✅ SAVE IT
+
+        // reset colors
         for (Component comp : candidatesPanel.getComponents()) {
             if (comp instanceof JLabel) {
                 JLabel lab = (JLabel) comp;
@@ -328,16 +358,15 @@ public class AdminRemoveCandidate extends JFrame {
                 }
             }
         }
-        
-        // Highlight selected candidate
+
         selectedLabel.setForeground(new Color(72, 248, 254));
-        
-        // Update candidate details
+
         courseLabel.setText("Course: " + course);
         positionLabel.setText("Position: " + position);
         yearLabel.setText("Year: " + year);
         sectionLabel.setText("Section: " + section);
     }
+
 
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> new model.admin.AdminRemoveCandidate());
@@ -365,4 +394,5 @@ public class AdminRemoveCandidate extends JFrame {
             interRegular = new Font("Arial", Font.PLAIN, 16);
         }
     }
+    
 }

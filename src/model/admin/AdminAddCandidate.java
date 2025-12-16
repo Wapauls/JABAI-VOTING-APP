@@ -261,17 +261,19 @@ public class AdminAddCandidate extends JFrame {
         mainPanel.add(descriptionLabel);
         
         descriptionArea = new JTextArea();
-        descriptionArea.setBounds(431, 156, 385, 53);
         descriptionArea.setBackground(new Color(217, 217, 217));
         descriptionArea.setForeground(Color.BLACK);
         descriptionArea.setFont(interRegular.deriveFont(14f));
         descriptionArea.setLineWrap(true);
         descriptionArea.setWrapStyleWord(true);
-        descriptionArea.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(new Color(180, 180, 180), 1),
-            BorderFactory.createEmptyBorder(4, 8, 4, 8)
-        ));
-        mainPanel.add(descriptionArea);
+        descriptionArea.setBorder(BorderFactory.createEmptyBorder(4, 8, 4, 8));
+        
+        JScrollPane descriptionScrollPane = new JScrollPane(descriptionArea);
+        descriptionScrollPane.setBounds(431, 156, 385, 53);
+        descriptionScrollPane.setBorder(BorderFactory.createLineBorder(new Color(180, 180, 180), 1));
+        descriptionScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+        descriptionScrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        mainPanel.add(descriptionScrollPane);
         
         // Courses ComboBox
         JLabel coursesLabel = new JLabel("Courses:");
@@ -339,14 +341,13 @@ public class AdminAddCandidate extends JFrame {
         addedCandidatesLabel.setBounds(23, 324, 219, 28);
         mainPanel.add(addedCandidatesLabel);
         
-        // Added Candidates Panel (EXACTLY like VotingPage)
-        addedCandidatesPanel = new JPanel();
-        addedCandidatesPanel.setLayout(null);
-        addedCandidatesPanel.setBounds(23, 360, 379, 143);
-        addedCandidatesPanel.setBackground(new Color(217, 217, 217));
-        addedCandidatesPanel.setBorder(BorderFactory.createLineBorder(Color.GRAY, 1));
+        // Fixed header panel
+        JPanel headerPanel = new JPanel();
+        headerPanel.setLayout(null);
+        headerPanel.setBackground(new Color(217, 217, 217));
+        headerPanel.setBounds(23, 360, 379, 30);
         
-        // Store references to fixed components
+        // Candidate header
         JLabel nameHeader = new JLabel("Name");
         nameHeader.setFont(interRegular.deriveFont(14f));
         nameHeader.setForeground(new Color(1, 1, 1));
@@ -355,25 +356,43 @@ public class AdminAddCandidate extends JFrame {
         nameHeader.setVerticalAlignment(SwingConstants.CENTER);
         nameHeader.setBackground(new Color(217, 217, 217));
         nameHeader.setOpaque(true);
-        addedCandidatesPanel.add(nameHeader);
+        headerPanel.add(nameHeader);
         
-        // Create a permanent separator that won't be affected by selection
+        // Create a separator line in the header
         JPanel separatorLine = new JPanel();
         separatorLine.setBackground(new Color(97, 97, 97));
         separatorLine.setBounds(5, 29, 369, 1);
         separatorLine.setOpaque(true);
-        addedCandidatesPanel.add(separatorLine);
+        headerPanel.add(separatorLine);
+        
+        mainPanel.add(headerPanel);
+        
+        // Candidates content panel (for scrolling)
+        addedCandidatesPanel = new JPanel();
+        addedCandidatesPanel.setLayout(null);
+        addedCandidatesPanel.setBackground(new Color(217, 217, 217));
+        addedCandidatesPanel.setPreferredSize(new Dimension(369, 1));
         
         // Load candidates from database instead of mock data
         java.util.List<Candidate> candidates = DatabaseHelper.readCandidates();
-        nextCandidateY = 28; // Reset to starting position
+        nextCandidateY = 0; // Reset to starting position (no offset for header)
         for (Candidate c : candidates) {
             JLabel candidateLabel = createCandidateLabel(c.name, nextCandidateY);
             addedCandidatesPanel.add(candidateLabel);
             nextCandidateY += 19;
         }
+        // Set preferred size based on number of candidates
+        if (nextCandidateY > 0) {
+            addedCandidatesPanel.setPreferredSize(new Dimension(369, nextCandidateY));
+        }
         
-        mainPanel.add(addedCandidatesPanel);
+        // Wrap only content in scroll pane (header is fixed above)
+        JScrollPane candidatesScrollPane = new JScrollPane(addedCandidatesPanel);
+        candidatesScrollPane.setBounds(23, 390, 379, 113);
+        candidatesScrollPane.setBorder(BorderFactory.createEmptyBorder());
+        candidatesScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+        candidatesScrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        mainPanel.add(candidatesScrollPane);
         
         // Add Button (#48f8fe background)
         addButton = new JButton() {
@@ -405,7 +424,7 @@ public class AdminAddCandidate extends JFrame {
         mainPanel.add(addButton);
         
         // Back Button - exact design
-        backButton = new JButton("< Back");
+        backButton = new JButton("← Back");
         backButton.setBounds(724, 477, 58, 22);
         backButton.setBackground(new Color(20, 20, 20));
         backButton.setForeground(new Color(255, 59, 59));
@@ -489,7 +508,7 @@ public class AdminAddCandidate extends JFrame {
             DatabaseHelper.appendCandidate(c);
         } catch (Exception ex) {
             ex.printStackTrace();
-            JOptionPane.showMessageDialog(this, "Warning: could not persist candidate to database.", "Warning", JOptionPane.WARNING_MESSAGE);
+            new AdminMessageDialog("Warning", "Warning: could not persist candidate to database.", AdminMessageDialog.WARNING);
         }
         
         // Clear form fields

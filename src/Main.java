@@ -10,6 +10,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import javax.imageio.ImageIO;
+import utils.ResourceLoader;
 
 public class Main extends JFrame {
     private JPanel mainPanel;
@@ -23,6 +24,9 @@ public class Main extends JFrame {
     private ImageIcon userIcon;
     private ImageIcon usersIcon;
     private ImageIcon closeIcon;
+    
+    // Resource loader for fonts and icons
+    private ResourceLoader resourceLoader;
     
     // For dragging
     private int dragX = 0;
@@ -57,6 +61,9 @@ public class Main extends JFrame {
     }
 
     public Main() {
+        // Initialize resource loader
+        resourceLoader = ResourceLoader.getInstance();
+        
         setTitle("Voting System");
         setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
         setSize(380, 259);
@@ -255,14 +262,57 @@ public class Main extends JFrame {
     
     // Method to load custom fonts
     private void loadCustomFonts() {
-        // Use system fonts - they work reliably everywhere
-        interBold = new Font("Arial", Font.BOLD, 24);
-        interRegular = new Font("Arial", Font.PLAIN, 16);
+        try {
+            // Load Inter Bold font using ResourceLoader
+            interBold = resourceLoader.loadFont("Inter-Bold.otf", 24f);
+            GraphicsEnvironment.getLocalGraphicsEnvironment().registerFont(interBold);
+            System.out.println("✅ Inter Bold font loaded successfully");
+        } catch (Exception e) {
+            System.err.println("Could not load Inter Bold font: " + e.getMessage());
+            interBold = new Font("Arial", Font.BOLD, 24);
+        }
+        
+        try {
+            // Load Inter Regular font using ResourceLoader
+            interRegular = resourceLoader.loadFont("Inter-Regular.otf", 16f);
+            GraphicsEnvironment.getLocalGraphicsEnvironment().registerFont(interRegular);
+            System.out.println("✅ Inter Regular font loaded successfully");
+        } catch (Exception e) {
+            System.err.println("Could not load Inter Regular font: " + e.getMessage());
+            interRegular = new Font("Arial", Font.PLAIN, 16);
+        }
     }
     
     // Method to load icons
     private void loadIcons() {
-        // Icons are optional - the application will work without them
-        // They will be loaded from classpath if available, but won't break if missing
+        try {
+            // Load user icon for VOTE button
+            userIcon = resourceLoader.loadIcon("user.png");
+            if (userIcon.getIconWidth() == 32 && userIcon.getIconHeight() == 32) {
+                System.out.println("✅ User icon loaded successfully");
+            }
+        } catch (Exception e) {
+            System.err.println("Could not load user icon: " + e.getMessage());
+        }
+        
+        try {
+            // Load users icon for ADMIN button
+            usersIcon = resourceLoader.loadIcon("users.png");
+            if (usersIcon.getIconWidth() > 0) {
+                System.out.println("✅ Users icon loaded successfully");
+            }
+        } catch (Exception e) {
+            System.err.println("Could not load users icon: " + e.getMessage());
+        }
+        
+        try {
+            // Load close icon
+            closeIcon = resourceLoader.loadIcon("close.png");
+            if (closeIcon.getIconWidth() > 0) {
+                System.out.println("✅ Close icon loaded successfully");
+            }
+        } catch (Exception e) {
+            System.err.println("Could not load close icon: " + e.getMessage());
+        }
     }
 }

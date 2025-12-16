@@ -276,17 +276,19 @@ public class AdminEditCandidates extends JFrame {
         mainPanel.add(changeDescriptionLabel);
         
         descriptionArea = new JTextArea();
-        descriptionArea.setBounds(431, 223, 379, 66);
         descriptionArea.setBackground(new Color(217, 217, 217));
         descriptionArea.setForeground(Color.BLACK);
         descriptionArea.setFont(interRegular.deriveFont(14f));
         descriptionArea.setLineWrap(true);
         descriptionArea.setWrapStyleWord(true);
-        descriptionArea.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(new Color(180, 180, 180), 1),
-            BorderFactory.createEmptyBorder(4, 8, 4, 8)
-        ));
-        mainPanel.add(descriptionArea);
+        descriptionArea.setBorder(BorderFactory.createEmptyBorder(4, 8, 4, 8));
+        
+        JScrollPane descriptionScrollPane = new JScrollPane(descriptionArea);
+        descriptionScrollPane.setBounds(431, 223, 379, 66);
+        descriptionScrollPane.setBorder(BorderFactory.createLineBorder(new Color(180, 180, 180), 1));
+        descriptionScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+        descriptionScrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        mainPanel.add(descriptionScrollPane);
         
         // Change Courses ComboBox
         String[] courses = {"Change a Course", "BSCS", "BSHM", "BAPOLS", "BSTM", "BSBA", "BSED"};
@@ -330,11 +332,11 @@ public class AdminEditCandidates extends JFrame {
         candidatesLabel.setBounds(23, 187, 219, 28);
         mainPanel.add(candidatesLabel);
         
-        // Candidates Panel
-        candidatesPanel = new JPanel();
-        candidatesPanel.setLayout(null);
-        candidatesPanel.setBounds(23, 223, 379, 280);
-        candidatesPanel.setBackground(new Color(217, 217, 217));
+        // Fixed header panel
+        JPanel headerPanel = new JPanel();
+        headerPanel.setLayout(null);
+        headerPanel.setBackground(new Color(217, 217, 217));
+        headerPanel.setBounds(23, 223, 379, 30);
         
         // Candidate headers
         JLabel nameHeader = new JLabel("Name");
@@ -342,25 +344,33 @@ public class AdminEditCandidates extends JFrame {
         nameHeader.setForeground(new Color(1, 1, 1));
         nameHeader.setBounds(5, 0, 45, 28);
         nameHeader.setHorizontalAlignment(SwingConstants.CENTER);
-        candidatesPanel.add(nameHeader);
+        headerPanel.add(nameHeader);
         
         JLabel statusHeader = new JLabel("Status");
         statusHeader.setFont(interRegular.deriveFont(14f));
         statusHeader.setForeground(new Color(1, 1, 1));
         statusHeader.setBounds(280, 0, 89, 28);
         statusHeader.setHorizontalAlignment(SwingConstants.CENTER);
-        candidatesPanel.add(statusHeader);
+        headerPanel.add(statusHeader);
         
         // Separator line
         JSeparator separator = new JSeparator();
         separator.setBackground(new Color(97, 97, 97));
         separator.setForeground(new Color(97, 97, 97));
         separator.setBounds(5, 29, 369, 1);
-        candidatesPanel.add(separator);
+        headerPanel.add(separator);
+        
+        mainPanel.add(headerPanel);
+        
+        // Candidates content panel (for scrolling)
+        candidatesPanel = new JPanel();
+        candidatesPanel.setLayout(null);
+        candidatesPanel.setBackground(new Color(217, 217, 217));
+        candidatesPanel.setPreferredSize(new Dimension(369, 1));
         
         // Dynamically load candidates from database
         java.util.List<Candidate> candidates = DatabaseHelper.readCandidates();
-        int yPos = 28;
+        int yPos = 0;
         for (Candidate c : candidates) {
             JLabel candidateLabel = new JLabel(c.name);
             candidateLabel.setFont(interRegular.deriveFont(14f));
@@ -391,8 +401,18 @@ public class AdminEditCandidates extends JFrame {
             
             yPos += 19;
         }
+        // Set preferred size based on number of candidates
+        if (yPos > 0) {
+            candidatesPanel.setPreferredSize(new Dimension(369, yPos));
+        }
         
-        mainPanel.add(candidatesPanel);
+        // Wrap only content in scroll pane (header is fixed above)
+        JScrollPane candidatesScrollPane = new JScrollPane(candidatesPanel);
+        candidatesScrollPane.setBounds(23, 253, 379, 250);
+        candidatesScrollPane.setBorder(BorderFactory.createEmptyBorder());
+        candidatesScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+        candidatesScrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        mainPanel.add(candidatesScrollPane);
         
         // Update Button (#48f8fe background)
         updateButton = new JButton() {
@@ -421,7 +441,7 @@ public class AdminEditCandidates extends JFrame {
         updateButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
         updateButton.addActionListener((ActionEvent e) -> {
             if (selectedCandidateName == null || selectedCandidateName.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "Please select a candidate to update.", "No selection", JOptionPane.WARNING_MESSAGE);
+                new AdminMessageDialog("No selection", "Please select a candidate to update.", AdminMessageDialog.WARNING);
                 return;
             }
 
@@ -433,7 +453,7 @@ public class AdminEditCandidates extends JFrame {
             String newSection = (String) sectionCombo.getSelectedItem();
 
             if (newName.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "Candidate name cannot be empty.", "Validation Error", JOptionPane.ERROR_MESSAGE);
+                new AdminMessageDialog("Validation Error", "Candidate name cannot be empty.", AdminMessageDialog.ERROR);
                 return;
             }
 
@@ -443,7 +463,7 @@ public class AdminEditCandidates extends JFrame {
             Candidate updated = new Candidate(newName, newPosition, newCourse, newYear, newSection, newDesc);
             boolean ok = DatabaseHelper.updateCandidate(selectedCandidateName, updated);
             if (!ok) {
-                JOptionPane.showMessageDialog(this, "Could not find candidate in database. Update failed.", "Error", JOptionPane.ERROR_MESSAGE);
+                new AdminMessageDialog("Error", "Could not find candidate in database. Update failed.", AdminMessageDialog.ERROR);
                 return;
             }
 
@@ -462,12 +482,12 @@ public class AdminEditCandidates extends JFrame {
             // update selectedCandidateName to newName
             selectedCandidateName = newName;
 
-            JOptionPane.showMessageDialog(this, "Candidate updated successfully.", "Success", JOptionPane.INFORMATION_MESSAGE);
+            new AdminMessageDialog("Success", "Candidate updated successfully.", AdminMessageDialog.INFO);
         });
         mainPanel.add(updateButton);
         
         // Back Button - exact design
-        backButton = new JButton("< Back");
+        backButton = new JButton("← Back");
         backButton.setBounds(724, 477, 58, 22);
         backButton.setBackground(new Color(20, 20, 20));
         backButton.setForeground(new Color(255, 59, 59));

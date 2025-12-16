@@ -3,19 +3,37 @@ package connectionDB;
 import java.sql.*;
 import java.time.Instant;
 import java.util.*;
+import java.io.File;
 
 public class DatabaseHelper {
-    private static final String DB_PATH = "database/voting.db";
-    private static Connection connection;
-
+    
+    // Database URL - relative path (recommended)
+    private static final String DB_URL = "jdbc:sqlite:database/voting.db";
+    
+    // Static block to load driver once
     static {
         try {
+            // Explicitly load the SQLite driver
             Class.forName("org.sqlite.JDBC");
+            System.out.println("✅ SQLite JDBC Driver loaded successfully");
+            
+            // Ensure database directory exists
+            File dbDir = new File("database");
+            if (!dbDir.exists()) {
+                dbDir.mkdirs();
+                System.out.println("📁 Created database directory: " + dbDir.getAbsolutePath());
+            }
+            
+            // Initialize database tables
             initializeDatabase();
+            System.out.println("✨ Database initialized successfully");
+            
         } catch (ClassNotFoundException e) {
-            System.err.println("SQLite JDBC driver not found. Please add the dependency.");
+            System.err.println("❌ Failed to load SQLite JDBC driver");
+            System.err.println("Make sure sqlite-jdbc-3.51.1.0.jar is in your classpath");
             e.printStackTrace();
         } catch (SQLException e) {
+            System.err.println("❌ Failed to initialize database");
             e.printStackTrace();
         }
     }
@@ -23,19 +41,33 @@ public class DatabaseHelper {
     /**
      * Get database connection
      */
-    private static Connection getConnection() throws SQLException {
-        if (connection == null || connection.isClosed()) {
-            connection = DriverManager.getConnection("jdbc:sqlite:" + DB_PATH);
+    public static Connection getConnection() throws SQLException {
+        try {
+            // Get connection - driver is already loaded
+            Connection conn = DriverManager.getConnection(DB_URL);
+            
+            // Enable foreign keys
+            conn.createStatement().execute("PRAGMA foreign_keys = ON");
+            
+            return conn;
+            
+        } catch (SQLException e) {
+            System.err.println("❌ Failed to connect to database: " + e.getMessage());
+            System.err.println("Database URL: " + DB_URL);
+            System.err.println("Working directory: " + System.getProperty("user.dir"));
+            throw e;
         }
-        return connection;
     }
 
     /**
      * Initialize database tables if they don't exist
      */
     private static void initializeDatabase() throws SQLException {
-        try (Connection conn = DriverManager.getConnection("jdbc:sqlite:" + DB_PATH);
+        try (Connection conn = DriverManager.getConnection(DB_URL);
              Statement stmt = conn.createStatement()) {
+
+            // Enable foreign keys
+            stmt.execute("PRAGMA foreign_keys = ON");
 
             // Create candidates table
             String createCandidates = "CREATE TABLE IF NOT EXISTS candidates (" +
@@ -75,10 +107,9 @@ public class DatabaseHelper {
                     ")";
             stmt.execute(createVoters);
 
-            // Database tables created without any initial mock data
+            System.out.println("✅ Database tables created/verified successfully");
         }
     }
-
 
     // ============ CANDIDATE DATABASE METHODS ============
 
@@ -100,6 +131,7 @@ public class DatabaseHelper {
                 out.add(c);
             }
         } catch (SQLException e) {
+            System.err.println("❌ Error reading candidates: " + e.getMessage());
             e.printStackTrace();
         }
         return out;
@@ -117,7 +149,9 @@ public class DatabaseHelper {
             pstmt.setString(5, c.section);
             pstmt.setString(6, c.description);
             pstmt.executeUpdate();
+            System.out.println("✅ Candidate added: " + c.name);
         } catch (SQLException e) {
+            System.err.println("❌ Error adding candidate: " + e.getMessage());
             e.printStackTrace();
         }
     }
@@ -139,8 +173,12 @@ public class DatabaseHelper {
             pstmt.setString(7, oldName);
 
             int rowsAffected = pstmt.executeUpdate();
+            if (rowsAffected > 0) {
+                System.out.println("✅ Candidate updated: " + oldName + " → " + newCandidate.name);
+            }
             return rowsAffected > 0;
         } catch (SQLException e) {
+            System.err.println("❌ Error updating candidate: " + e.getMessage());
             e.printStackTrace();
             return false;
         }
@@ -156,8 +194,12 @@ public class DatabaseHelper {
 
             pstmt.setString(1, name);
             int rowsAffected = pstmt.executeUpdate();
+            if (rowsAffected > 0) {
+                System.out.println("✅ Candidate deleted: " + name);
+            }
             return rowsAffected > 0;
         } catch (SQLException e) {
+            System.err.println("❌ Error deleting candidate: " + e.getMessage());
             e.printStackTrace();
             return false;
         }
@@ -178,7 +220,9 @@ public class DatabaseHelper {
             pstmt.setString(5, v.year);
             pstmt.setString(6, v.section);
             pstmt.executeUpdate();
+            System.out.println("✅ Vote recorded for: " + v.candidate);
         } catch (SQLException e) {
+            System.err.println("❌ Error recording vote: " + e.getMessage());
             e.printStackTrace();
         }
     }
@@ -201,6 +245,7 @@ public class DatabaseHelper {
                 out.add(v);
             }
         } catch (SQLException e) {
+            System.err.println("❌ Error reading votes: " + e.getMessage());
             e.printStackTrace();
         }
         return out;
@@ -216,6 +261,7 @@ public class DatabaseHelper {
                 counts.put(rs.getString("candidate"), rs.getInt("count"));
             }
         } catch (SQLException e) {
+            System.err.println("❌ Error counting votes: " + e.getMessage());
             e.printStackTrace();
         }
         return counts;
@@ -248,6 +294,7 @@ public class DatabaseHelper {
                 out.add(v);
             }
         } catch (SQLException e) {
+            System.err.println("❌ Error reading voters: " + e.getMessage());
             e.printStackTrace();
         }
         return out;
@@ -267,7 +314,9 @@ public class DatabaseHelper {
             pstmt.setInt(7, voter.hasVoted ? 1 : 0);
             pstmt.setString(8, voter.voteTimestamp);
             pstmt.executeUpdate();
+            System.out.println("✅ Voter added: " + voter.name + " (" + voter.studentID + ")");
         } catch (SQLException e) {
+            System.err.println("❌ Error adding voter: " + e.getMessage());
             e.printStackTrace();
         }
     }
@@ -287,6 +336,7 @@ public class DatabaseHelper {
                 }
             }
         } catch (SQLException e) {
+            System.err.println("❌ Error checking voter status: " + e.getMessage());
             e.printStackTrace();
         }
         return false;
@@ -303,8 +353,12 @@ public class DatabaseHelper {
             pstmt.setString(1, Instant.now().toString());
             pstmt.setString(2, studentID);
             int rowsAffected = pstmt.executeUpdate();
+            if (rowsAffected > 0) {
+                System.out.println("✅ Voter marked as voted: " + studentID);
+            }
             return rowsAffected > 0;
         } catch (SQLException e) {
+            System.err.println("❌ Error marking voter as voted: " + e.getMessage());
             e.printStackTrace();
             return false;
         }
@@ -334,6 +388,7 @@ public class DatabaseHelper {
                 }
             }
         } catch (SQLException e) {
+            System.err.println("❌ Error getting voter by ID: " + e.getMessage());
             e.printStackTrace();
         }
         return null;
@@ -364,8 +419,46 @@ public class DatabaseHelper {
                 stats.put("notVoted", total - voted);
             }
         } catch (SQLException e) {
+            System.err.println("❌ Error getting voter statistics: " + e.getMessage());
             e.printStackTrace();
         }
         return stats;
+    }
+    
+    /**
+     * Test database connection
+     */
+    public static void testConnection() {
+        System.out.println("\n🔧 Testing database connection...");
+        System.out.println("Database URL: " + DB_URL);
+        System.out.println("Working directory: " + System.getProperty("user.dir"));
+        
+        try (Connection conn = getConnection()) {
+            System.out.println("✅ Connection test SUCCESSFUL!");
+            
+            // Test with a simple query
+            try (Statement stmt = conn.createStatement();
+                 ResultSet rs = stmt.executeQuery("SELECT sqlite_version() AS version")) {
+                if (rs.next()) {
+                    System.out.println("📊 SQLite version: " + rs.getString("version"));
+                }
+            }
+            
+        } catch (SQLException e) {
+            System.err.println("❌ Connection test FAILED!");
+            e.printStackTrace();
+        }
+    }
+    
+    /**
+     * Main method for testing
+     */
+    public static void main(String[] args) {
+        System.out.println("🚀 Starting DatabaseHelper test...\n");
+        
+        // Test connection
+        testConnection();
+        
+        System.out.println("\n✨ DatabaseHelper test completed!");
     }
 }

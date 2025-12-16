@@ -33,6 +33,13 @@ public class VoteConfirmationDialog extends JFrame {
     // studentID of the voter who is casting this vote (may be null)
     private String studentID;
     
+    // Vote details
+    private String voteCandidate;
+    private String votePosition;
+    private String voteCourse;
+    private String voteYear;
+    private String voteSection;
+    
     // For dragging
     private int dragX = 0;
     private int dragY = 0;
@@ -107,6 +114,16 @@ public class VoteConfirmationDialog extends JFrame {
     }
 
     public VoteConfirmationDialog() {
+        this(null, null, null, null, null, null);
+    }
+    
+    public VoteConfirmationDialog(String candidate, String position, String course, String year, String section, String studentID) {
+        this.voteCandidate = candidate == null ? "" : candidate;
+        this.votePosition = position == null ? "" : position;
+        this.voteCourse = course == null ? "" : course;
+        this.voteYear = year == null ? "" : year;
+        this.voteSection = section == null ? "" : section;
+        this.studentID = studentID;
         
         setTitle("Voting System");
         setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
@@ -207,6 +224,24 @@ public class VoteConfirmationDialog extends JFrame {
         yesButton.setFocusPainted(false);
         yesButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
         yesButton.addActionListener(e -> {
+            // Record the vote to the database
+            if (!voteCandidate.isEmpty()) {
+                Vote voteRecord = new Vote(
+                    java.time.Instant.now().toString(),
+                    voteCandidate,
+                    votePosition,
+                    voteCourse,
+                    voteYear,
+                    voteSection
+                );
+                DatabaseHelper.recordVote(voteRecord);
+                
+                // Mark voter as voted if studentID is available
+                if (studentID != null && !studentID.isEmpty()) {
+                    DatabaseHelper.markVoterAsVoted(studentID);
+                }
+            }
+            
             // Re-open Vote History Page
             SwingUtilities.invokeLater(() -> new model.user.VoteHistoryPage());
 
@@ -242,6 +277,10 @@ public class VoteConfirmationDialog extends JFrame {
 
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> new model.user.VoteConfirmationDialog());
+    }
+    
+    public void setVotingPageFrame(JFrame frame) {
+        this.votingPageFrame = frame;
     }
     
     // Method to load custom fonts

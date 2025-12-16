@@ -30,6 +30,13 @@ public class VotingPage extends JFrame {
     private JButton voteButton;
     private JButton backButton;
     
+    // Track selected candidate for voting
+    private String selectedCandidateName;
+    private String selectedCandidatePosition;
+    private String selectedCandidateCourse;
+    private String selectedCandidateYear;
+    private String selectedCandidateSection;
+    
     // For dragging
     private int dragX = 0;
     private int dragY = 0;
@@ -357,30 +364,38 @@ public class VotingPage extends JFrame {
         candidatesLabel.setBounds(23, 218, 219, 28);
         mainPanel.add(candidatesLabel);
 
-        // Candidates Panel (exactly as in design)
-        candidatesPanel = new JPanel();
-        candidatesPanel.setLayout(null);
-        candidatesPanel.setBounds(23, 256, 379, 247);
-        candidatesPanel.setBackground(new Color(217, 217, 217));
-
+        // Fixed header panel
+        JPanel headerPanel = new JPanel();
+        headerPanel.setLayout(null);
+        headerPanel.setBackground(new Color(217, 217, 217));
+        headerPanel.setBounds(23, 256, 379, 30);
+        
         // Candidate header
         JLabel nameHeader = new JLabel("Name");
         nameHeader.setFont(interRegular.deriveFont(14f));
         nameHeader.setForeground(new Color(1, 1, 1));
         nameHeader.setBounds(5, 0, 45, 28);
         nameHeader.setHorizontalAlignment(SwingConstants.CENTER);
-        candidatesPanel.add(nameHeader);
+        headerPanel.add(nameHeader);
 
         // Separator line
         JSeparator separator = new JSeparator();
         separator.setBackground(new Color(97, 97, 97));
         separator.setForeground(new Color(97, 97, 97));
         separator.setBounds(5, 29, 369, 1);
-        candidatesPanel.add(separator);
+        headerPanel.add(separator);
+        
+        mainPanel.add(headerPanel);
+
+        // Candidates content panel (for scrolling)
+        candidatesPanel = new JPanel();
+        candidatesPanel.setLayout(null);
+        candidatesPanel.setBackground(new Color(217, 217, 217));
+        candidatesPanel.setPreferredSize(new Dimension(369, 1));
 
         // Dynamically load candidates from the text database
         java.util.List<Candidate> candidates = DatabaseHelper.readCandidates();
-        int yPos = 28;
+        int yPos = 0;
         for (Candidate c : candidates) {
             JLabel lbl = new JLabel(c.name);
             lbl.setFont(interRegular.deriveFont(14f));
@@ -396,8 +411,18 @@ public class VotingPage extends JFrame {
             candidatesPanel.add(lbl);
             yPos += 19;
         }
-
-        mainPanel.add(candidatesPanel);
+        // Set preferred size based on number of candidates
+        if (yPos > 0) {
+            candidatesPanel.setPreferredSize(new Dimension(369, yPos));
+        }
+        
+        // Wrap only content in scroll pane (header is fixed above)
+        JScrollPane candidatesScrollPane = new JScrollPane(candidatesPanel);
+        candidatesScrollPane.setBounds(23, 286, 379, 217);
+        candidatesScrollPane.setBorder(BorderFactory.createEmptyBorder());
+        candidatesScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+        candidatesScrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        mainPanel.add(candidatesScrollPane);
 
         // Selected Candidate Label
         selectedCandidateLabel = new JLabel("Selected Candidate: None");
@@ -451,12 +476,29 @@ public class VotingPage extends JFrame {
         voteButton.setFocusPainted(false);
         voteButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
         voteButton.addActionListener((ActionEvent e) -> {
-            SwingUtilities.invokeLater(() -> new VoteConfirmationDialog());
+            // Only proceed if a candidate is selected
+            if (selectedCandidateName == null || selectedCandidateName.isEmpty()) {
+                new MessageDialog("No Candidate Selected", "Please select a candidate before voting.", MessageDialog.WARNING);
+                return;
+            }
+            
+            // Create confirmation dialog with candidate details
+            SwingUtilities.invokeLater(() -> {
+                VoteConfirmationDialog dialog = new VoteConfirmationDialog(
+                    selectedCandidateName,
+                    selectedCandidatePosition,
+                    selectedCandidateCourse,
+                    selectedCandidateYear,
+                    selectedCandidateSection,
+                    currentStudentID
+                );
+                dialog.setVotingPageFrame(VotingPage.this);
+            });
         });
         mainPanel.add(voteButton);
 
         // Back Button - exact design
-        backButton = new JButton("< Back");
+        backButton = new JButton("← Back");
         backButton.setBounds(724, 477, 58, 22);
         backButton.setBackground(new Color(20, 20, 20));
         backButton.setForeground(new Color(255, 59, 59));
@@ -543,14 +585,19 @@ public class VotingPage extends JFrame {
     
     // Method to handle candidate selection
     private void selectCandidate(String candidateName, JLabel candidateLabel) {
+        selectedCandidateName = candidateName;
         selectedCandidateLabel.setText("Selected Candidate: " + candidateName);
 
-        // Try to find candidate description from database
+        // Try to find candidate details from database
         java.util.List<Candidate> candidates = DatabaseHelper.readCandidates();
         String desc = null;
         for (Candidate c : candidates) {
             if (c.name.equals(candidateName)) {
                 desc = c.description;
+                selectedCandidatePosition = c.position;
+                selectedCandidateCourse = c.course;
+                selectedCandidateYear = c.year;
+                selectedCandidateSection = c.section;
                 break;
             }
         }

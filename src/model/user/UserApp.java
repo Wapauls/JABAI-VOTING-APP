@@ -303,7 +303,7 @@
                     boolean voted = connectionDB.DatabaseHelper.hasVoted(studentID);
                     if (voted) {
                         // Show message and open vote history instead
-                        JOptionPane.showMessageDialog(this, "You have already voted.", "Already Voted", JOptionPane.INFORMATION_MESSAGE);
+                        new MessageDialog("Already Voted", "You have already voted.", MessageDialog.INFO);
                         SwingUtilities.invokeLater(() -> new model.user.VoteHistoryPage());
                         dispose();
                         return;
