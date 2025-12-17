@@ -1,6 +1,7 @@
 package model.user;
 
 import javax.swing.*;
+import javax.swing.border.Border;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.awt.event.ActionEvent;
@@ -8,11 +9,12 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
 import java.awt.image.BufferedImage;
-import java.io.File;
 import java.io.IOException;
 import javax.imageio.ImageIO;
 import connectionDB.DatabaseHelper;
 import connectionDB.Candidate;
+import utils.ResourceLoader;
+import utils.NormalizationHelper;
 
 public class VotingPage extends JFrame {
     private JPanel mainPanel;
@@ -25,10 +27,12 @@ public class VotingPage extends JFrame {
     private JComboBox<String> yearCombo;
     private JComboBox<String> sectionCombo;
     private JPanel candidatesPanel;
+    private JScrollPane candidatesScrollPane;
     private JLabel selectedCandidateLabel;
     private JTextArea descriptionArea;
     private JButton voteButton;
     private JButton backButton;
+    private Border defaultCandidatesBorder;
     
     // Track selected candidate for voting
     private String selectedCandidateName;
@@ -48,6 +52,9 @@ public class VotingPage extends JFrame {
     // Icons
     private ImageIcon arrowDownIcon;
     private ImageIcon closeIcon;
+
+    // Shared resource loader
+    private final ResourceLoader resourceLoader = ResourceLoader.getInstance();
     // current logged-in student ID (may be null)
     private String currentStudentID;
     
@@ -169,6 +176,11 @@ public class VotingPage extends JFrame {
         buildUI();
     }
 
+    // User credentials (for filtering)
+    private String userCourse;
+    private String userYear;
+    private String userSection;
+
     // Shared UI builder for both constructors
     private void buildUI() {
         setTitle("Voting System");
@@ -177,6 +189,16 @@ public class VotingPage extends JFrame {
         setLocationRelativeTo(null);
         setResizable(false);
         setUndecorated(true);
+
+        // Load user credentials if studentID is provided
+        if (currentStudentID != null && !currentStudentID.isEmpty()) {
+            connectionDB.Voter voter = connectionDB.DatabaseHelper.getVoterByID(currentStudentID);
+            if (voter != null) {
+                userCourse = voter.course;
+                userYear = voter.year;
+                userSection = voter.section;
+            }
+        }
 
         // Load custom fonts and icons
         loadCustomFonts();
@@ -270,6 +292,10 @@ public class VotingPage extends JFrame {
         coursesCombo = new PaddedComboBox(courses);
         coursesCombo.setBounds(116, 120, 286, 29);
         coursesCombo.setSelectedIndex(0);
+        // Lock course if user credentials are set
+        if (userCourse != null && !userCourse.isEmpty()) {
+            coursesCombo.setEnabled(false);
+        }
 
         // Remove any extra padding from the combobox display
         if (coursesCombo.getEditor() != null) {
@@ -310,7 +336,7 @@ public class VotingPage extends JFrame {
         yearLabel.setBounds(23, 165, 93, 45);
         mainPanel.add(yearLabel);
 
-        String[] years = {"Select a Year Level", "1st", "2nd", "3rd", "4th"};
+        String[] years = {"Select a Year", "1st", "2nd", "3rd", "4th"};
         yearCombo = new PaddedComboBox(years);
         yearCombo.setBounds(116, 173, 286, 29);
         yearCombo.setSelectedIndex(0);
@@ -341,6 +367,10 @@ public class VotingPage extends JFrame {
         sectionCombo = new PaddedComboBox(sections);
         sectionCombo.setBounds(530, 173, 286, 29);
         sectionCombo.setSelectedIndex(0);
+        // Lock section if user credentials are set
+        if (userSection != null && !userSection.isEmpty()) {
+            sectionCombo.setEnabled(false);
+        }
 
         if (sectionCombo.getEditor() != null) {
             Component editor = sectionCombo.getEditor().getEditorComponent();
@@ -392,32 +422,25 @@ public class VotingPage extends JFrame {
         candidatesPanel.setLayout(null);
         candidatesPanel.setBackground(new Color(217, 217, 217));
         candidatesPanel.setPreferredSize(new Dimension(369, 1));
+        defaultCandidatesBorder = candidatesPanel.getBorder();
 
-        // Dynamically load candidates from the text database
-        java.util.List<Candidate> candidates = DatabaseHelper.readCandidates();
-        int yPos = 0;
-        for (Candidate c : candidates) {
-            JLabel lbl = new JLabel(c.name);
-            lbl.setFont(interRegular.deriveFont(14f));
-            lbl.setForeground(new Color(1, 1, 1));
-            lbl.setBounds(5, yPos, 196, 28);
-            lbl.setCursor(new Cursor(Cursor.HAND_CURSOR));
-            lbl.addMouseListener(new java.awt.event.MouseAdapter() {
-                @Override
-                public void mouseClicked(java.awt.event.MouseEvent e) {
-                    selectCandidate(c.name, lbl);
-                }
-            });
-            candidatesPanel.add(lbl);
-            yPos += 19;
+        // Auto-filter candidates based on user credentials (Course, Year, Section)
+        // Position is user choice, so we filter by Course, Year, Section only
+        if (userCourse != null && !userCourse.isEmpty()) {
+            coursesCombo.setSelectedItem(userCourse);
         }
-        // Set preferred size based on number of candidates
-        if (yPos > 0) {
-            candidatesPanel.setPreferredSize(new Dimension(369, yPos));
+        if (userYear != null && !userYear.isEmpty()) {
+            yearCombo.setSelectedItem(userYear);
+        }
+        if (userSection != null && !userSection.isEmpty()) {
+            sectionCombo.setSelectedItem(userSection);
         }
         
+        // Dynamically load candidates from the text database (auto-filtered by user credentials)
+        rebuildCandidateList(userCourse, null, userYear, userSection);
+        
         // Wrap only content in scroll pane (header is fixed above)
-        JScrollPane candidatesScrollPane = new JScrollPane(candidatesPanel);
+        candidatesScrollPane = new JScrollPane(candidatesPanel);
         candidatesScrollPane.setBounds(23, 286, 379, 217);
         candidatesScrollPane.setBorder(BorderFactory.createEmptyBorder());
         candidatesScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
@@ -478,10 +501,24 @@ public class VotingPage extends JFrame {
         voteButton.addActionListener((ActionEvent e) -> {
             // Only proceed if a candidate is selected
             if (selectedCandidateName == null || selectedCandidateName.isEmpty()) {
-                new MessageDialog("No Candidate Selected", "Please select a candidate before voting.", MessageDialog.WARNING);
+                new MessageDialog("<html><div style='text-align: center;'>No Candidate Selected</div></html>", "Please select a candidate before voting.", MessageDialog.WARNING);
                 return;
             }
-            
+
+            // Validate that candidate matches user's course, year, section
+            if (userCourse != null && !userCourse.isEmpty() && !selectedCandidateCourse.equals(userCourse)) {
+                new MessageDialog("Invalid Candidate", "You can only vote for candidates from your course (" + userCourse + ").", MessageDialog.ERROR);
+                return;
+            }
+            if (userYear != null && !userYear.isEmpty() && !selectedCandidateYear.equals(userYear)) {
+                new MessageDialog("Invalid Candidate", "You can only vote for candidates from your year (" + userYear + ").", MessageDialog.ERROR);
+                return;
+            }
+            if (userSection != null && !userSection.isEmpty() && !selectedCandidateSection.equals(userSection)) {
+                new MessageDialog("Invalid Candidate", "You can only vote for candidates from your section (" + userSection + ").", MessageDialog.ERROR);
+                return;
+            }
+
             // Create confirmation dialog with candidate details
             SwingUtilities.invokeLater(() -> {
                 VoteConfirmationDialog dialog = new VoteConfirmationDialog(
@@ -536,51 +573,7 @@ public class VotingPage extends JFrame {
         String selectedPosition = (String) positionCombo.getSelectedItem();
         String selectedYear = (String) yearCombo.getSelectedItem();
         String selectedSection = (String) sectionCombo.getSelectedItem();
-        
-        // Remove all candidate labels except header and separator
-        java.util.List<Component> toRemove = new java.util.ArrayList<>();
-        for (Component comp : candidatesPanel.getComponents()) {
-            if (comp instanceof JLabel) {
-                JLabel lbl = (JLabel) comp;
-                if (!"Name".equals(lbl.getText())) {
-                    toRemove.add(comp);
-                }
-            }
-        }
-        for (Component comp : toRemove) {
-            candidatesPanel.remove(comp);
-        }
-        
-        // Load all candidates from database
-        java.util.List<Candidate> candidates = DatabaseHelper.readCandidates();
-        int yPos = 28;
-        
-        // Filter and display candidates based on selected criteria
-        for (Candidate c : candidates) {
-            boolean matchesCourse = selectedCourse.equals("Select a Course") || c.course.equals(selectedCourse);
-            boolean matchesPosition = selectedPosition.equals("Select a Position") || c.position.equals(selectedPosition);
-            boolean matchesYear = selectedYear.equals("Select a Year Level") || c.year.equals(selectedYear);
-            boolean matchesSection = selectedSection.equals("Select a Section") || c.section.equals(selectedSection);
-            
-            if (matchesCourse && matchesPosition && matchesYear && matchesSection) {
-                JLabel lbl = new JLabel(c.name);
-                lbl.setFont(interRegular.deriveFont(14f));
-                lbl.setForeground(new Color(1, 1, 1));
-                lbl.setBounds(5, yPos, 196, 28);
-                lbl.setCursor(new Cursor(Cursor.HAND_CURSOR));
-                lbl.addMouseListener(new java.awt.event.MouseAdapter() {
-                    @Override
-                    public void mouseClicked(java.awt.event.MouseEvent e) {
-                        selectCandidate(c.name, lbl);
-                    }
-                });
-                candidatesPanel.add(lbl);
-                yPos += 19;
-            }
-        }
-        
-        candidatesPanel.revalidate();
-        candidatesPanel.repaint();
+        rebuildCandidateList(selectedCourse, selectedPosition, selectedYear, selectedSection);
     }
     
     // Method to handle candidate selection
@@ -624,53 +617,126 @@ public class VotingPage extends JFrame {
         }
     }
 
+    private void rebuildCandidateList(String selectedCourse, String selectedPosition, String selectedYear, String selectedSection) {
+        candidatesPanel.removeAll();
+        java.util.List<Candidate> candidates = DatabaseHelper.readCandidates();
+        
+        // Filter candidates based on user's course, year, section (enforce matching)
+        // Position is user choice, so filter by position if selected
+        java.util.List<Candidate> filtered = new java.util.ArrayList<>();
+        for (Candidate c : candidates) {
+            boolean matchesCourse = selectedCourse == null || selectedCourse.equals("Select a Course") || c.course.equals(selectedCourse);
+            boolean matchesPosition = selectedPosition == null || selectedPosition.equals("Select a Position") || c.position.equals(selectedPosition);
+            boolean matchesYear = selectedYear == null || selectedYear.equals("Select a Year") || c.year.equals(selectedYear);
+            boolean matchesSection = selectedSection == null || selectedSection.equals("Select a Section") || c.section.equals(selectedSection);
+
+            // If user credentials are set, enforce strict matching
+            if (userCourse != null && !userCourse.isEmpty() && !c.course.equals(userCourse)) {
+                continue;
+            }
+            if (userYear != null && !userYear.isEmpty() && !c.year.equals(userYear)) {
+                continue;
+            }
+            if (userSection != null && !userSection.isEmpty() && !c.section.equals(userSection)) {
+                continue;
+            }
+
+            if (matchesCourse && matchesPosition && matchesYear && matchesSection) {
+                filtered.add(c);
+            }
+        }
+        
+        // Sort: by position order (President, Vice President, Secretary, Treasurer, Auditor)
+        // then by course alphabetically within same position
+        java.util.Map<String, Integer> positionOrder = new java.util.HashMap<>();
+        positionOrder.put("President", 1);
+        positionOrder.put("Vice President", 2);
+        positionOrder.put("Secretary", 3);
+        positionOrder.put("Treasurer", 4);
+        positionOrder.put("Auditor", 5);
+        
+        filtered.sort((a, b) -> {
+            int posA = positionOrder.getOrDefault(a.position, 99);
+            int posB = positionOrder.getOrDefault(b.position, 99);
+            if (posA != posB) {
+                return Integer.compare(posA, posB);
+            }
+            // Same position: sort by course
+            String courseA = a.course == null ? "" : a.course;
+            String courseB = b.course == null ? "" : b.course;
+            return courseA.compareTo(courseB);
+        });
+        
+        int yPos = 0;
+        for (Candidate c : filtered) {
+            // Display format: "Name (Position)"
+            String displayText = c.name + " (" + c.position + ")";
+            JLabel lbl = new JLabel(displayText);
+            lbl.setFont(interRegular.deriveFont(14f));
+            lbl.setForeground(new Color(1, 1, 1));
+            lbl.setBounds(5, yPos, 364, 28);
+            lbl.setCursor(new Cursor(Cursor.HAND_CURSOR));
+            lbl.addMouseListener(new java.awt.event.MouseAdapter() {
+                @Override
+                public void mouseClicked(java.awt.event.MouseEvent e) {
+                    selectCandidate(c.name, lbl);
+                }
+            });
+            candidatesPanel.add(lbl);
+            yPos += 19;
+        }
+        candidatesPanel.setPreferredSize(new Dimension(369, Math.max(yPos, 1)));
+        candidatesPanel.revalidate();
+        candidatesPanel.repaint();
+    }
+
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> new model.user.VotingPage());
     }
     
-    // Method to load custom fonts
+    // Method to load custom fonts using ResourceLoader
     private void loadCustomFonts() {
         try {
             // Load Inter Bold font
-            File boldFontFile = new File("fonts/Inter-Bold.otf");
-            interBold = Font.createFont(Font.TRUETYPE_FONT, boldFontFile).deriveFont(24f);
+            interBold = resourceLoader.loadFont("Inter-Bold.otf", 24f);
             GraphicsEnvironment.getLocalGraphicsEnvironment().registerFont(interBold);
-        } catch (IOException | FontFormatException e) {
+        } catch (Exception e) {
             System.err.println("Could not load Inter Bold font: " + e.getMessage());
             interBold = new Font("Arial", Font.BOLD, 24);
         }
-        
+
         try {
             // Load Inter Regular font
-            File regularFontFile = new File("fonts/Inter-Regular.otf");
-            interRegular = Font.createFont(Font.TRUETYPE_FONT, regularFontFile).deriveFont(16f);
+            interRegular = resourceLoader.loadFont("Inter-Regular.otf", 16f);
             GraphicsEnvironment.getLocalGraphicsEnvironment().registerFont(interRegular);
-        } catch (IOException | FontFormatException e) {
+        } catch (Exception e) {
             System.err.println("Could not load Inter Regular font: " + e.getMessage());
             interRegular = new Font("Arial", Font.PLAIN, 16);
         }
     }
-    
-    // Method to load icons
+
+    // Method to load icons using ResourceLoader (classpath-safe)
     private void loadIcons() {
         try {
             // Load arrow down icon
-            File arrowDownFile = new File("icons/arrow-down.png");
-            if (arrowDownFile.exists()) {
-                arrowDownIcon = new ImageIcon(ImageIO.read(arrowDownFile));
+            arrowDownIcon = resourceLoader.loadIcon("arrow_down.png");
+            if (arrowDownIcon == null || arrowDownIcon.getIconWidth() <= 0) {
+                throw new IOException("Arrow icon not found");
             }
         } catch (Exception e) {
             System.err.println("Could not load arrow-down icon: " + e.getMessage());
+            arrowDownIcon = null;
         }
-        
+
         try {
             // Load close icon
-            File closeFile = new File("icons/close.png");
-            if (closeFile.exists()) {
-                closeIcon = new ImageIcon(ImageIO.read(closeFile));
+            closeIcon = resourceLoader.loadIcon("close.png");
+            if (closeIcon == null || closeIcon.getIconWidth() <= 0) {
+                throw new IOException("Close icon not found");
             }
         } catch (Exception e) {
             System.err.println("Could not load close icon: " + e.getMessage());
+            closeIcon = null;
         }
     }
 }

@@ -28,6 +28,7 @@ public class AdminEditConfirmation extends JFrame {
     private String position;
     @SuppressWarnings("unused")
     private JFrame adminEditCandidateFrame;
+    private Runnable onConfirm;
     
     // For dragging
     private int dragX = 0;
@@ -61,10 +62,11 @@ public class AdminEditConfirmation extends JFrame {
         }
     }
 
-    public AdminEditConfirmation(String candidateName, String position, JFrame adminEditCandidateFrame) {
+    public AdminEditConfirmation(String candidateName, String position, JFrame adminEditCandidateFrame, Runnable onConfirm) {
         this.candidateName = candidateName;
         this.position = position;
         this.adminEditCandidateFrame = adminEditCandidateFrame;
+        this.onConfirm = onConfirm;
         
         setTitle("Voting System");
         setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
@@ -174,7 +176,9 @@ public class AdminEditConfirmation extends JFrame {
         yesButton.setFocusPainted(false);
         yesButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
         yesButton.addActionListener(e -> {
-            // Just close the confirmation dialog
+            if (onConfirm != null) {
+                onConfirm.run();
+            }
             dispose();
         });
         mainPanel.add(yesButton);
@@ -198,7 +202,7 @@ public class AdminEditConfirmation extends JFrame {
     }
 
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> new AdminEditConfirmation("Test Candidate", "President", null));
+        SwingUtilities.invokeLater(() -> new AdminEditConfirmation("Test Candidate", "President", null, null));
     }
     
     // Method to load custom fonts

@@ -7,14 +7,16 @@ public class Vote {
     public String course;
     public String year;
     public String section;
+    public String studentID; // voter who cast this vote (may be null)
 
-    public Vote(String timestamp, String candidate, String position, String course, String year, String section) {
+    public Vote(String timestamp, String candidate, String position, String course, String year, String section, String studentID) {
         this.timestamp = timestamp;
         this.candidate = candidate;
         this.position = position;
         this.course = course;
         this.year = year;
         this.section = section;
+        this.studentID = studentID;
     }
 
     public static Vote fromLine(String line) {
@@ -25,10 +27,11 @@ public class Vote {
         String course = p.length > 3 ? p[3] : "";
         String year = p.length > 4 ? p[4] : "";
         String section = p.length > 5 ? p[5] : "";
-        return new Vote(timestamp, candidate, position, course, year, section);
+        String studentID = p.length > 6 ? p[6] : "";
+        return new Vote(timestamp, candidate, position, course, year, section, studentID);
     }
 
     public String toLine() {
-        return String.join("|", timestamp, candidate, position, course, year, section);
+        return String.join("|", timestamp, candidate, position, course, year, section, studentID == null ? "" : studentID);
     }
 }

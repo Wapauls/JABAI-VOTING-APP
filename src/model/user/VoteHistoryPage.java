@@ -11,9 +11,9 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
 import java.awt.image.BufferedImage;
-import java.io.File;
-import java.io.IOException;
 import javax.imageio.ImageIO;
+import javax.imageio.ImageIO;
+import utils.ResourceLoader;
 
 public class VoteHistoryPage extends JFrame {
     private JPanel mainPanel;
@@ -23,6 +23,7 @@ public class VoteHistoryPage extends JFrame {
     private JLabel sectionBar;
     private JButton backButton;
     private JButton voteAgainButton;
+    private String currentStudentID;
     
     // For dragging
     private int dragX = 0;
@@ -31,6 +32,9 @@ public class VoteHistoryPage extends JFrame {
     // Custom fonts
     private Font interBold;
     private Font interRegular;
+
+    // Shared resource loader
+    private final ResourceLoader resourceLoader = ResourceLoader.getInstance();
     
     // Custom JLabel class for gradient text
     class GradientLabel extends JLabel {
@@ -57,6 +61,11 @@ public class VoteHistoryPage extends JFrame {
     }
 
     public VoteHistoryPage() {
+        this(null);
+    }
+
+    public VoteHistoryPage(String studentID) {
+        this.currentStudentID = studentID;
         setTitle("Voting System");
         setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
         setSize(839, 525);
@@ -109,10 +118,14 @@ public class VoteHistoryPage extends JFrame {
         closeButton.setFocusPainted(false);
         closeButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
         
-        // Try to load close icon from icons folder
+        // Try to load close icon via ResourceLoader
         try {
-            BufferedImage closeIcon = ImageIO.read(new File("icons/close.png"));
-            closeButton.setIcon(new ImageIcon(closeIcon));
+            ImageIcon closeIcon = resourceLoader.loadIcon("close.png");
+            if (closeIcon != null && closeIcon.getIconWidth() > 0) {
+                closeButton.setIcon(closeIcon);
+            } else {
+                throw new Exception("Close icon not found");
+            }
         } catch (Exception e) {
             // Create a simple X icon as fallback
             BufferedImage xIcon = new BufferedImage(14, 14, BufferedImage.TYPE_INT_ARGB);
@@ -209,17 +222,22 @@ public class VoteHistoryPage extends JFrame {
         candidatesPanel.setBackground(new Color(217, 217, 217));
         candidatesPanel.setPreferredSize(new Dimension(774, 1));
         
-        // Dynamically load votes from database
-        java.util.List<Vote> votes = DatabaseHelper.readVotes();
+        // Dynamically load votes from database (scoped to current student if provided)
+        java.util.List<Vote> votes = (currentStudentID == null || currentStudentID.isEmpty())
+                ? DatabaseHelper.readVotes()
+                : DatabaseHelper.readVotesForStudent(currentStudentID);
         int yPos = 0;
         for (Vote v : votes) {
             // Extract date from ISO timestamp (first 10 chars: YYYY-MM-DD)
             String dateStr = v.timestamp.length() >= 10 ? v.timestamp.substring(0, 10) : v.timestamp;
+            final String voteCandidate = v.candidate;
+            final String votePosition = v.position;
             
-            JLabel candName = new JLabel(v.candidate);
+            JLabel candName = new JLabel(v.candidate + " (" + v.position + ")");
             candName.setFont(interRegular.deriveFont(14f));
             candName.setForeground(new Color(1, 1, 1));
             candName.setBounds(33, yPos, 364, 24);
+            candName.setCursor(new Cursor(Cursor.HAND_CURSOR));
             candidatesPanel.add(candName);
             
             JLabel position = new JLabel(v.position);
@@ -227,6 +245,7 @@ public class VoteHistoryPage extends JFrame {
             position.setForeground(new Color(1, 1, 1));
             position.setBounds(239, yPos, 179, 24);
             position.setHorizontalAlignment(SwingConstants.CENTER);
+            position.setCursor(new Cursor(Cursor.HAND_CURSOR));
             candidatesPanel.add(position);
             
             JLabel year = new JLabel(v.year);
@@ -234,6 +253,7 @@ public class VoteHistoryPage extends JFrame {
             year.setForeground(new Color(1, 1, 1));
             year.setBounds(418, yPos, 101, 24);
             year.setHorizontalAlignment(SwingConstants.CENTER);
+            year.setCursor(new Cursor(Cursor.HAND_CURSOR));
             candidatesPanel.add(year);
             
             JLabel section = new JLabel(v.section);
@@ -241,6 +261,7 @@ public class VoteHistoryPage extends JFrame {
             section.setForeground(new Color(1, 1, 1));
             section.setBounds(519, yPos, 130, 24);
             section.setHorizontalAlignment(SwingConstants.CENTER);
+            section.setCursor(new Cursor(Cursor.HAND_CURSOR));
             candidatesPanel.add(section);
             
             JLabel date = new JLabel(dateStr);
@@ -248,7 +269,24 @@ public class VoteHistoryPage extends JFrame {
             date.setForeground(new Color(1, 1, 1));
             date.setBounds(649, yPos, 158, 24);
             date.setHorizontalAlignment(SwingConstants.CENTER);
+            date.setCursor(new Cursor(Cursor.HAND_CURSOR));
             candidatesPanel.add(date);
+
+            java.awt.event.MouseAdapter details = new java.awt.event.MouseAdapter() {
+                @Override
+                public void mouseClicked(java.awt.event.MouseEvent e) {
+                    new MessageDialog(
+                        "Vote Details",
+                        "Candidate: " + voteCandidate + "\nPosition: " + votePosition,
+                        MessageDialog.INFO
+                    );
+                }
+            };
+            candName.addMouseListener(details);
+            position.addMouseListener(details);
+            year.addMouseListener(details);
+            section.addMouseListener(details);
+            date.addMouseListener(details);
             
             yPos += 24;
         }
@@ -291,8 +329,14 @@ public class VoteHistoryPage extends JFrame {
         voteAgainButton.setFocusPainted(false);
         voteAgainButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
         voteAgainButton.addActionListener((ActionEvent e) -> {
-            // Navigate to VotingPage
-            SwingUtilities.invokeLater(() -> new model.user.VotingPage());
+            // Navigate to VotingPage, keep student context if available
+            SwingUtilities.invokeLater(() -> {
+                if (currentStudentID != null && !currentStudentID.isEmpty()) {
+                    new model.user.VotingPage(currentStudentID);
+                } else {
+                    new model.user.VotingPage();
+                }
+            });
             dispose();
         });
         mainPanel.add(voteAgainButton);
@@ -307,22 +351,28 @@ public class VoteHistoryPage extends JFrame {
         backButton.setFocusPainted(false);
         backButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
         backButton.addActionListener((ActionEvent e) -> {
-            // Return to UserApp
-            try {
-                Class<?> userAppClass = Class.forName("model.user.UserApp");
-                java.lang.reflect.Constructor<?> constructor = userAppClass.getConstructor();
-                SwingUtilities.invokeLater(() -> {
+            new MessageDialog(
+                "Confirm Exit",
+                "Are you sure you want to go back?",
+                MessageDialog.WARNING,
+                () -> {
                     try {
-                        constructor.newInstance();
+                        Class<?> userAppClass = Class.forName("model.user.UserApp");
+                        java.lang.reflect.Constructor<?> constructor = userAppClass.getConstructor();
+                        SwingUtilities.invokeLater(() -> {
+                            try {
+                                constructor.newInstance();
+                            } catch (Exception ex) {
+                                ex.printStackTrace();
+                            }
+                        });
                     } catch (Exception ex) {
-                        ex.printStackTrace();
+                        System.out.println("UserApp class not found. Closing application.");
                     }
-                });
-            } catch (Exception ex) {
-                // If UserApp doesn't exist, just close
-                System.out.println("UserApp class not found. Closing application.");
-            }
-            dispose();
+                    dispose();
+                },
+                () -> { /* cancel: do nothing */ }
+            );
         });
         mainPanel.add(backButton);
         
@@ -334,24 +384,22 @@ public class VoteHistoryPage extends JFrame {
         SwingUtilities.invokeLater(() -> new model.user.VoteHistoryPage());
     }
     
-    // Method to load custom fonts
+    // Method to load custom fonts using ResourceLoader
     private void loadCustomFonts() {
         try {
             // Load Inter Bold font
-            File boldFontFile = new File("fonts/Inter-Bold.otf");
-            interBold = Font.createFont(Font.TRUETYPE_FONT, boldFontFile).deriveFont(24f);
+            interBold = resourceLoader.loadFont("Inter-Bold.otf", 24f);
             GraphicsEnvironment.getLocalGraphicsEnvironment().registerFont(interBold);
-        } catch (IOException | FontFormatException e) {
+        } catch (Exception e) {
             System.err.println("Could not load Inter Bold font: " + e.getMessage());
             interBold = new Font("Arial", Font.BOLD, 24);
         }
-        
+
         try {
             // Load Inter Regular font
-            File regularFontFile = new File("fonts/Inter-Regular.otf");
-            interRegular = Font.createFont(Font.TRUETYPE_FONT, regularFontFile).deriveFont(16f);
+            interRegular = resourceLoader.loadFont("Inter-Regular.otf", 16f);
             GraphicsEnvironment.getLocalGraphicsEnvironment().registerFont(interRegular);
-        } catch (IOException | FontFormatException e) {
+        } catch (Exception e) {
             System.err.println("Could not load Inter Regular font: " + e.getMessage());
             interRegular = new Font("Arial", Font.PLAIN, 16);
         }

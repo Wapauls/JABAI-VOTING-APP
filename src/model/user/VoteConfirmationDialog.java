@@ -11,9 +11,9 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
 import java.awt.image.BufferedImage;
-import java.io.File;
-import java.io.IOException;
 import javax.imageio.ImageIO;
+import javax.imageio.ImageIO;
+import utils.ResourceLoader;
 
 public class VoteConfirmationDialog extends JFrame {
     private JPanel mainPanel;
@@ -33,7 +33,7 @@ public class VoteConfirmationDialog extends JFrame {
     // studentID of the voter who is casting this vote (may be null)
     private String studentID;
     
-    // Vote details
+        // Vote details
     private String voteCandidate;
     private String votePosition;
     private String voteCourse;
@@ -47,6 +47,9 @@ public class VoteConfirmationDialog extends JFrame {
     // Custom fonts
     private Font interBold;
     private Font interRegular;
+
+    // Shared resource loader
+    private final ResourceLoader resourceLoader = ResourceLoader.getInstance();
     
     // Custom JLabel class for gradient text
     class GradientLabel extends JLabel {
@@ -177,10 +180,14 @@ public class VoteConfirmationDialog extends JFrame {
         closeButton.setFocusPainted(false);
         closeButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
         
-        // Try to load close icon from icons folder
+        // Try to load close icon via ResourceLoader
         try {
-            BufferedImage closeIcon = ImageIO.read(new File("icons/close.png"));
-            closeButton.setIcon(new ImageIcon(closeIcon));
+            ImageIcon closeIcon = resourceLoader.loadIcon("close.png");
+            if (closeIcon != null && closeIcon.getIconWidth() > 0) {
+                closeButton.setIcon(closeIcon);
+            } else {
+                throw new Exception("Close icon not found");
+            }
         } catch (Exception e) {
             // Fallback to text if icon not found
             closeButton.setText("✕");
@@ -207,7 +214,10 @@ public class VoteConfirmationDialog extends JFrame {
         mainPanel.add(confirmationLabel);
         
         // Confirmation Message
-        String messageText = "Are you sure you want to vote for\nCandidate for the position of Position?";
+        String messageText = "Are you sure you want to vote for\n" +
+                             (voteCandidate == null || voteCandidate.isEmpty() ? "this candidate" : voteCandidate) +
+                             " for the position of " +
+                             (votePosition == null || votePosition.isEmpty() ? "this position" : votePosition) + "?";
         
         messageLabel = new MultiLineLabel(messageText);
         messageLabel.setFont(interRegular.deriveFont(16f));
@@ -226,24 +236,39 @@ public class VoteConfirmationDialog extends JFrame {
         yesButton.addActionListener(e -> {
             // Record the vote to the database
             if (!voteCandidate.isEmpty()) {
-                Vote voteRecord = new Vote(
-                    java.time.Instant.now().toString(),
-                    voteCandidate,
-                    votePosition,
-                    voteCourse,
-                    voteYear,
-                    voteSection
-                );
-                DatabaseHelper.recordVote(voteRecord);
-                
-                // Mark voter as voted if studentID is available
-                if (studentID != null && !studentID.isEmpty()) {
-                    DatabaseHelper.markVoterAsVoted(studentID);
+                // Prevent duplicate vote for same candidate/position by same user
+                if (studentID != null && !studentID.isEmpty()
+                        && DatabaseHelper.hasUserVotedForCandidate(studentID, voteCandidate, votePosition)) {
+                    new MessageDialog("Already Voted",
+                            "You have already voted for this candidate and position.",
+                            MessageDialog.WARNING);
+                } else {
+                    Vote voteRecord = new Vote(
+                        java.time.Instant.now().toString(),
+                        voteCandidate,
+                        votePosition,
+                        voteCourse,
+                        voteYear,
+                        voteSection,
+                        studentID
+                    );
+                    DatabaseHelper.recordVote(voteRecord);
+                    
+                    // Mark voter as voted if studentID is available
+                    if (studentID != null && !studentID.isEmpty()) {
+                        DatabaseHelper.markVoterAsVoted(studentID);
+                    }
                 }
             }
             
-            // Re-open Vote History Page
-            SwingUtilities.invokeLater(() -> new model.user.VoteHistoryPage());
+            // Re-open Vote History Page for this user (if known)
+            SwingUtilities.invokeLater(() -> {
+                if (studentID != null && !studentID.isEmpty()) {
+                    new model.user.VoteHistoryPage(studentID);
+                } else {
+                    new model.user.VoteHistoryPage();
+                }
+            });
 
             // Close VotingPage frame
             if (votingPageFrame != null) {
@@ -283,24 +308,22 @@ public class VoteConfirmationDialog extends JFrame {
         this.votingPageFrame = frame;
     }
     
-    // Method to load custom fonts
+    // Method to load custom fonts using ResourceLoader
     private void loadCustomFonts() {
         try {
             // Load Inter Bold font
-            File boldFontFile = new File("fonts/Inter-Bold.otf");
-            interBold = Font.createFont(Font.TRUETYPE_FONT, boldFontFile).deriveFont(24f);
+            interBold = resourceLoader.loadFont("Inter-Bold.otf", 24f);
             GraphicsEnvironment.getLocalGraphicsEnvironment().registerFont(interBold);
-        } catch (IOException | FontFormatException e) {
+        } catch (Exception e) {
             System.err.println("Could not load Inter Bold font: " + e.getMessage());
             interBold = new Font("Arial", Font.BOLD, 24);
         }
-        
+
         try {
             // Load Inter Regular font
-            File regularFontFile = new File("fonts/Inter-Regular.otf");
-            interRegular = Font.createFont(Font.TRUETYPE_FONT, regularFontFile).deriveFont(16f);
+            interRegular = resourceLoader.loadFont("Inter-Regular.otf", 16f);
             GraphicsEnvironment.getLocalGraphicsEnvironment().registerFont(interRegular);
-        } catch (IOException | FontFormatException e) {
+        } catch (Exception e) {
             System.err.println("Could not load Inter Regular font: " + e.getMessage());
             interRegular = new Font("Arial", Font.PLAIN, 16);
         }

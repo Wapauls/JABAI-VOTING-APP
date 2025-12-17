@@ -8,9 +8,8 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
 import java.awt.image.BufferedImage;
-import java.io.File;
-import java.io.IOException;
 import javax.imageio.ImageIO;
+import utils.ResourceLoader;
 
 public class Admin extends JFrame {
     private JPanel mainPanel;
@@ -32,6 +31,9 @@ public class Admin extends JFrame {
     // Custom fonts
     private Font interBold;
     private Font interRegular;
+
+    // Shared resource loader
+    private final ResourceLoader resourceLoader = ResourceLoader.getInstance();
     
     // Custom JLabel class for gradient text
     class GradientLabel extends JLabel {
@@ -118,10 +120,14 @@ public class Admin extends JFrame {
         closeButton.setFocusPainted(false);
         closeButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
         
-        // Try to load close icon from icons folder
+        // Try to load close icon via ResourceLoader
         try {
-            BufferedImage closeIcon = ImageIO.read(new File("icons/close.png"));
-            closeButton.setIcon(new ImageIcon(closeIcon));
+            ImageIcon closeIcon = resourceLoader.loadIcon("close.png");
+            if (closeIcon != null && closeIcon.getIconWidth() > 0) {
+                closeButton.setIcon(closeIcon);
+            } else {
+                throw new Exception("Close icon not found");
+            }
         } catch (Exception e) {
             // Create a simple X icon as fallback
             BufferedImage xIcon = new BufferedImage(14, 14, BufferedImage.TYPE_INT_ARGB);
@@ -147,7 +153,7 @@ public class Admin extends JFrame {
         
         // Admin Menu Header
         adminMenuLabel = new JLabel("Admin Menu");
-        adminMenuLabel.setFont(interRegular.deriveFont(24f));
+        adminMenuLabel.setFont(interBold.deriveFont(24f));
         adminMenuLabel.setForeground(Color.WHITE);
         adminMenuLabel.setBounds(9, 65, 405, 47);
         adminMenuLabel.setHorizontalAlignment(SwingConstants.CENTER);
@@ -292,24 +298,22 @@ public class Admin extends JFrame {
         SwingUtilities.invokeLater(() -> new Admin());
     }
     
-    // Method to load custom fonts
+    // Method to load custom fonts using ResourceLoader
     private void loadCustomFonts() {
         try {
             // Load Inter Bold font
-            File boldFontFile = new File("fonts/Inter-Bold.otf");
-            interBold = Font.createFont(Font.TRUETYPE_FONT, boldFontFile).deriveFont(24f);
+            interBold = resourceLoader.loadFont("Inter-Bold.otf", 24f);
             GraphicsEnvironment.getLocalGraphicsEnvironment().registerFont(interBold);
-        } catch (IOException | FontFormatException e) {
+        } catch (Exception e) {
             System.err.println("Could not load Inter Bold font: " + e.getMessage());
             interBold = new Font("Arial", Font.BOLD, 24);
         }
-        
+
         try {
             // Load Inter Regular font
-            File regularFontFile = new File("fonts/Inter-Regular.otf");
-            interRegular = Font.createFont(Font.TRUETYPE_FONT, regularFontFile).deriveFont(16f);
+            interRegular = resourceLoader.loadFont("Inter-Regular.otf", 16f);
             GraphicsEnvironment.getLocalGraphicsEnvironment().registerFont(interRegular);
-        } catch (IOException | FontFormatException e) {
+        } catch (Exception e) {
             System.err.println("Could not load Inter Regular font: " + e.getMessage());
             interRegular = new Font("Arial", Font.PLAIN, 16);
         }

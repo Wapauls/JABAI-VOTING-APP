@@ -4,6 +4,7 @@ import connectionDB.DatabaseHelper;
 import connectionDB.Candidate;
 
 import javax.swing.*;
+import javax.swing.border.Border;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.awt.event.ActionEvent;
@@ -11,9 +12,9 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
 import java.awt.image.BufferedImage;
-import java.io.File;
-import java.io.IOException;
 import javax.imageio.ImageIO;
+import javax.imageio.ImageIO;
+import utils.ResourceLoader;
 
 public class AdminAddCandidate extends JFrame {
     private JPanel mainPanel;
@@ -31,6 +32,8 @@ public class AdminAddCandidate extends JFrame {
     private JPanel addedCandidatesPanel;
     private JButton addButton;
     private JButton backButton;
+    private Border defaultFieldBorder;
+    private Border defaultComboBorder;
     
     // Track next candidate position
     private int nextCandidateY = 66; // Starting position for new candidates (after 3 sample ones)
@@ -44,6 +47,9 @@ public class AdminAddCandidate extends JFrame {
     // Custom fonts
     private Font interBold;
     private Font interRegular;
+
+    // Shared resource loader
+    private final ResourceLoader resourceLoader = ResourceLoader.getInstance();
     
     // Custom JLabel class for gradient text
     class GradientLabel extends JLabel {
@@ -112,12 +118,10 @@ public class AdminAddCandidate extends JFrame {
                     button.setFocusPainted(false);
                     button.setCursor(new Cursor(Cursor.HAND_CURSOR));
                     
-                    // Create arrow icon
+                    // Create arrow icon using ResourceLoader
                     try {
-                        // Try to load arrow icon
-                        File arrowDownFile = new File("icons/arrow-down.png");
-                        if (arrowDownFile.exists()) {
-                            ImageIcon arrowIcon = new ImageIcon(ImageIO.read(arrowDownFile));
+                        ImageIcon arrowIcon = resourceLoader.loadIcon("arrow_down.png");
+                        if (arrowIcon != null && arrowIcon.getIconWidth() > 0) {
                             Image scaledIcon = arrowIcon.getImage().getScaledInstance(12, 7, Image.SCALE_SMOOTH);
                             button.setIcon(new ImageIcon(scaledIcon));
                         } else {
@@ -200,10 +204,14 @@ public class AdminAddCandidate extends JFrame {
         closeButton.setFocusPainted(false);
         closeButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
         
-        // Try to load close icon from icons folder
+        // Try to load close icon via ResourceLoader
         try {
-            BufferedImage closeIcon = ImageIO.read(new File("icons/close.png"));
-            closeButton.setIcon(new ImageIcon(closeIcon));
+            ImageIcon closeIcon = resourceLoader.loadIcon("close.png");
+            if (closeIcon != null && closeIcon.getIconWidth() > 0) {
+                closeButton.setIcon(closeIcon);
+            } else {
+                throw new Exception("Close icon not found");
+            }
         } catch (Exception e) {
             // Create a simple X icon as fallback
             BufferedImage xIcon = new BufferedImage(14, 14, BufferedImage.TYPE_INT_ARGB);
@@ -229,7 +237,7 @@ public class AdminAddCandidate extends JFrame {
         
         // Add Candidate Page Header
         addCandidatePageLabel = new JLabel("Add Candidate Page");
-        addCandidatePageLabel.setFont(interRegular.deriveFont(24f));
+        addCandidatePageLabel.setFont(interBold.deriveFont(24f));
         addCandidatePageLabel.setForeground(Color.WHITE);
         addCandidatePageLabel.setBounds(217, 65, 405, 47);
         addCandidatePageLabel.setHorizontalAlignment(SwingConstants.CENTER);
@@ -252,6 +260,7 @@ public class AdminAddCandidate extends JFrame {
             BorderFactory.createEmptyBorder(0, 8, 0, 8)
         ));
         mainPanel.add(nameField);
+        defaultFieldBorder = nameField.getBorder();
         
         // Description Area
         JLabel descriptionLabel = new JLabel("Description:");
@@ -333,6 +342,7 @@ public class AdminAddCandidate extends JFrame {
         sectionCombo.setBounds(530, 287, 286, 29);
         sectionCombo.setSelectedIndex(0);
         mainPanel.add(sectionCombo);
+        defaultComboBorder = sectionCombo.getBorder();
         
         // List of Added Candidates Label
         JLabel addedCandidatesLabel = new JLabel("List of Candidates Added");
@@ -377,7 +387,7 @@ public class AdminAddCandidate extends JFrame {
         java.util.List<Candidate> candidates = DatabaseHelper.readCandidates();
         nextCandidateY = 0; // Reset to starting position (no offset for header)
         for (Candidate c : candidates) {
-            JLabel candidateLabel = createCandidateLabel(c.name, nextCandidateY);
+            JLabel candidateLabel = createCandidateLabel(c.name, c.position, nextCandidateY);
             addedCandidatesPanel.add(candidateLabel);
             nextCandidateY += 19;
         }
@@ -420,6 +430,35 @@ public class AdminAddCandidate extends JFrame {
         addButton.setFocusPainted(false);
         addButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
         addButton.addActionListener((ActionEvent e) -> {
+            resetBorders();
+            String name = nameField.getText().trim();
+            String description = descriptionArea.getText().trim();
+            String course = (String) coursesCombo.getSelectedItem();
+            String position = (String) positionCombo.getSelectedItem();
+            String year = (String) yearCombo.getSelectedItem();
+            String section = (String) sectionCombo.getSelectedItem();
+
+            boolean invalid = false;
+            if (name.isEmpty()) { nameField.setBorder(BorderFactory.createLineBorder(Color.RED, 1)); invalid = true; }
+            if ("Select a Course".equals(course)) { coursesCombo.setBorder(BorderFactory.createLineBorder(Color.RED, 1)); invalid = true; }
+            if ("Select a Position".equals(position)) { positionCombo.setBorder(BorderFactory.createLineBorder(Color.RED, 1)); invalid = true; }
+            if ("Select a Year Level".equals(year)) { yearCombo.setBorder(BorderFactory.createLineBorder(Color.RED, 1)); invalid = true; }
+            if ("Select a Section".equals(section)) { sectionCombo.setBorder(BorderFactory.createLineBorder(Color.RED, 1)); invalid = true; }
+
+            if (invalid) {
+                new AdminMessageDialog("Missing data", "Fill all required fields before adding.", AdminMessageDialog.WARNING);
+                return;
+            }
+
+            // Prevent duplicates
+            boolean exists = connectionDB.DatabaseHelper.readCandidates().stream().anyMatch(c -> c.name.equalsIgnoreCase(name));
+            if (exists) {
+                nameField.setBorder(BorderFactory.createLineBorder(Color.RED, 2));
+                new AdminMessageDialog("Duplicate", "Candidate already exists. Use Edit instead.", AdminMessageDialog.ERROR);
+                return;
+            }
+
+            addCandidate();
         });
         mainPanel.add(addButton);
         
@@ -444,11 +483,11 @@ public class AdminAddCandidate extends JFrame {
     }
     
     // Helper method to create candidate labels with click functionality (EXACTLY like VotingPage)
-    private JLabel createCandidateLabel(String name, int yPosition) {
-        JLabel candidateLabel = new JLabel(name);
+    private JLabel createCandidateLabel(String name, String position, int yPosition) {
+        JLabel candidateLabel = new JLabel(name + " (" + position + ")");
         candidateLabel.setFont(interRegular.deriveFont(14f));
         candidateLabel.setForeground(new Color(1, 1, 1));
-        candidateLabel.setBounds(5, yPosition, 196, 28);
+        candidateLabel.setBounds(5, yPosition, 364, 28);
         candidateLabel.setCursor(new Cursor(Cursor.HAND_CURSOR));
         
         // Add mouse listener for selection (EXACTLY like VotingPage)
@@ -490,15 +529,12 @@ public class AdminAddCandidate extends JFrame {
         nextCandidateY += 28; // Use full height (28) for each candidate
         
         // Create new candidate label with click functionality
-        JLabel newCandidate = createCandidateLabel(name, newCandidateY);
+        JLabel newCandidate = createCandidateLabel(name, position, newCandidateY);
         addedCandidatesPanel.add(newCandidate);
         
-        // Update panel size if needed
-        if (newCandidateY + 28 > addedCandidatesPanel.getHeight()) {
-            addedCandidatesPanel.setBounds(23, 360, 379, newCandidateY + 35);
-        }
-        
-        // Revalidate and repaint to show the new candidate
+        // Update preferred size to avoid extra spacing issues
+        int newHeight = newCandidateY + 28;
+        addedCandidatesPanel.setPreferredSize(new Dimension(369, Math.max(newHeight, addedCandidatesPanel.getHeight())));
         addedCandidatesPanel.revalidate();
         addedCandidatesPanel.repaint();
 
@@ -520,28 +556,34 @@ public class AdminAddCandidate extends JFrame {
         sectionCombo.setSelectedIndex(0);
     }
 
+    private void resetBorders() {
+        nameField.setBorder(defaultFieldBorder);
+        coursesCombo.setBorder(defaultComboBorder);
+        positionCombo.setBorder(defaultComboBorder);
+        yearCombo.setBorder(defaultComboBorder);
+        sectionCombo.setBorder(defaultComboBorder);
+    }
+
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> new model.admin.AdminAddCandidate());
     }
     
-    // Method to load custom fonts
+    // Method to load custom fonts using ResourceLoader
     private void loadCustomFonts() {
         try {
             // Load Inter Bold font
-            File boldFontFile = new File("fonts/Inter-Bold.otf");
-            interBold = Font.createFont(Font.TRUETYPE_FONT, boldFontFile).deriveFont(24f);
+            interBold = resourceLoader.loadFont("Inter-Bold.otf", 24f);
             GraphicsEnvironment.getLocalGraphicsEnvironment().registerFont(interBold);
-        } catch (IOException | FontFormatException e) {
+        } catch (Exception e) {
             System.err.println("Could not load Inter Bold font: " + e.getMessage());
             interBold = new Font("Arial", Font.BOLD, 24);
         }
-        
+
         try {
             // Load Inter Regular font
-            File regularFontFile = new File("fonts/Inter-Regular.otf");
-            interRegular = Font.createFont(Font.TRUETYPE_FONT, regularFontFile).deriveFont(16f);
+            interRegular = resourceLoader.loadFont("Inter-Regular.otf", 16f);
             GraphicsEnvironment.getLocalGraphicsEnvironment().registerFont(interRegular);
-        } catch (IOException | FontFormatException e) {
+        } catch (Exception e) {
             System.err.println("Could not load Inter Regular font: " + e.getMessage());
             interRegular = new Font("Arial", Font.PLAIN, 16);
         }

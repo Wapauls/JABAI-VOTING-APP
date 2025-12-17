@@ -8,9 +8,8 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
 import java.awt.image.BufferedImage;
-import java.io.File;
-import java.io.IOException;
 import javax.imageio.ImageIO;
+import utils.ResourceLoader;
 
 public class AdminMessageDialog extends JFrame {
     private JPanel mainPanel;
@@ -29,6 +28,9 @@ public class AdminMessageDialog extends JFrame {
     // Custom fonts
     private Font interBold;
     private Font interRegular;
+
+    // Shared resource loader
+    private final ResourceLoader resourceLoader = ResourceLoader.getInstance();
     
     // Message types
     public static final int WARNING = 0;
@@ -165,10 +167,14 @@ public class AdminMessageDialog extends JFrame {
         closeButton.setFocusPainted(false);
         closeButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
         
-        // Try to load close icon from icons folder
+        // Try to load close icon via ResourceLoader
         try {
-            BufferedImage closeIcon = ImageIO.read(new File("icons/close.png"));
-            closeButton.setIcon(new ImageIcon(closeIcon));
+            ImageIcon closeIcon = resourceLoader.loadIcon("close.png");
+            if (closeIcon != null && closeIcon.getIconWidth() > 0) {
+                closeButton.setIcon(closeIcon);
+            } else {
+                throw new Exception("Close icon not found");
+            }
         } catch (Exception e) {
             // Fallback to text if icon not found
             closeButton.setText("✕");
@@ -190,7 +196,7 @@ public class AdminMessageDialog extends JFrame {
         headerLabel = new JLabel(title);
         headerLabel.setFont(interBold.deriveFont(24f));
         headerLabel.setForeground(Color.WHITE);
-        headerLabel.setBounds(95, 67, 233, 46);
+        headerLabel.setBounds(19, 67, 385, 46);
         headerLabel.setHorizontalAlignment(SwingConstants.CENTER);
         mainPanel.add(headerLabel);
         
@@ -241,24 +247,22 @@ public class AdminMessageDialog extends JFrame {
         SwingUtilities.invokeLater(() -> new AdminMessageDialog("Warning", "Please select a candidate to update."));
     }
     
-    // Method to load custom fonts
+    // Method to load custom fonts using ResourceLoader
     private void loadCustomFonts() {
         try {
             // Load Inter Bold font
-            File boldFontFile = new File("fonts/Inter-Bold.otf");
-            interBold = Font.createFont(Font.TRUETYPE_FONT, boldFontFile).deriveFont(24f);
+            interBold = resourceLoader.loadFont("Inter-Bold.otf", 24f);
             GraphicsEnvironment.getLocalGraphicsEnvironment().registerFont(interBold);
-        } catch (IOException | FontFormatException e) {
+        } catch (Exception e) {
             System.err.println("Could not load Inter Bold font: " + e.getMessage());
             interBold = new Font("Arial", Font.BOLD, 24);
         }
-        
+
         try {
             // Load Inter Regular font
-            File regularFontFile = new File("fonts/Inter-Regular.otf");
-            interRegular = Font.createFont(Font.TRUETYPE_FONT, regularFontFile).deriveFont(16f);
+            interRegular = resourceLoader.loadFont("Inter-Regular.otf", 16f);
             GraphicsEnvironment.getLocalGraphicsEnvironment().registerFont(interRegular);
-        } catch (IOException | FontFormatException e) {
+        } catch (Exception e) {
             System.err.println("Could not load Inter Regular font: " + e.getMessage());
             interRegular = new Font("Arial", Font.PLAIN, 16);
         }

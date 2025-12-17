@@ -89,9 +89,17 @@ public class DatabaseHelper {
                     "position TEXT," +
                     "course TEXT," +
                     "year TEXT," +
-                    "section TEXT" +
+                    "section TEXT," +
+                    "studentID TEXT" +
                     ")";
             stmt.execute(createVotes);
+            
+            // Best-effort migration: ensure studentID column exists on existing databases
+            try {
+                stmt.execute("ALTER TABLE votes ADD COLUMN studentID TEXT");
+            } catch (SQLException ignore) {
+                // Column already exists – safe to ignore
+            }
 
             // Create voters table
             String createVoters = "CREATE TABLE IF NOT EXISTS voters (" +
@@ -188,16 +196,29 @@ public class DatabaseHelper {
      * Delete a candidate record by name. Returns true if a deletion occurred.
      */
     public static boolean deleteCandidate(String name) {
+        String deleteVotes = "DELETE FROM votes WHERE candidate = ?";
         String query = "DELETE FROM candidates WHERE name = ?";
-        try (Connection conn = getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(query)) {
+        try (Connection conn = getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement voteStmt = conn.prepareStatement(deleteVotes);
+                 PreparedStatement pstmt = conn.prepareStatement(query)) {
 
-            pstmt.setString(1, name);
-            int rowsAffected = pstmt.executeUpdate();
-            if (rowsAffected > 0) {
-                System.out.println("✅ Candidate deleted: " + name);
+                voteStmt.setString(1, name);
+                voteStmt.executeUpdate();
+
+                pstmt.setString(1, name);
+                int rowsAffected = pstmt.executeUpdate();
+                conn.commit();
+                if (rowsAffected > 0) {
+                    System.out.println("✅ Candidate deleted: " + name + " (votes removed)");
+                }
+                return rowsAffected > 0;
+            } catch (SQLException inner) {
+                conn.rollback();
+                throw inner;
+            } finally {
+                conn.setAutoCommit(true);
             }
-            return rowsAffected > 0;
         } catch (SQLException e) {
             System.err.println("❌ Error deleting candidate: " + e.getMessage());
             e.printStackTrace();
@@ -209,7 +230,7 @@ public class DatabaseHelper {
     // ============ VOTE DATABASE METHODS ============
 
     public static void recordVote(Vote v) {
-        String query = "INSERT INTO votes (timestamp, candidate, position, course, year, section) VALUES (?, ?, ?, ?, ?, ?)";
+        String query = "INSERT INTO votes (timestamp, candidate, position, course, year, section, studentID) VALUES (?, ?, ?, ?, ?, ?, ?)";
         try (Connection conn = getConnection();
              PreparedStatement pstmt = conn.prepareStatement(query)) {
 
@@ -219,6 +240,7 @@ public class DatabaseHelper {
             pstmt.setString(4, v.course);
             pstmt.setString(5, v.year);
             pstmt.setString(6, v.section);
+            pstmt.setString(7, v.studentID);
             pstmt.executeUpdate();
             System.out.println("✅ Vote recorded for: " + v.candidate);
         } catch (SQLException e) {
@@ -231,7 +253,10 @@ public class DatabaseHelper {
         List<Vote> out = new ArrayList<>();
         try (Connection conn = getConnection();
              Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery("SELECT timestamp, candidate, position, course, year, section FROM votes")) {
+             ResultSet rs = stmt.executeQuery(
+                 "SELECT timestamp, candidate, position, course, year, section, studentID " +
+                 "FROM votes v WHERE EXISTS (SELECT 1 FROM candidates c WHERE c.name = v.candidate)"
+             )) {
 
             while (rs.next()) {
                 Vote v = new Vote(
@@ -240,7 +265,8 @@ public class DatabaseHelper {
                     rs.getString("position"),
                     rs.getString("course"),
                     rs.getString("year"),
-                    rs.getString("section")
+                    rs.getString("section"),
+                    rs.getString("studentID")
                 );
                 out.add(v);
             }
@@ -268,8 +294,67 @@ public class DatabaseHelper {
     }
 
     public static Vote makeVote(String candidate, String position, String course, String year, String section) {
-        return new Vote(Instant.now().toString(), candidate == null ? "" : candidate, position == null ? "" : position,
-                        course == null ? "" : course, year == null ? "" : year, section == null ? "" : section);
+        return new Vote(Instant.now().toString(),
+                        candidate == null ? "" : candidate,
+                        position == null ? "" : position,
+                        course == null ? "" : course,
+                        year == null ? "" : year,
+                        section == null ? "" : section,
+                        null);
+    }
+
+    /**
+     * Get all votes for a specific student.
+     */
+    public static List<Vote> readVotesForStudent(String studentID) {
+        List<Vote> out = new ArrayList<>();
+        String sql = "SELECT timestamp, candidate, position, course, year, section, studentID " +
+                     "FROM votes v WHERE studentID = ? " +
+                     "AND EXISTS (SELECT 1 FROM candidates c WHERE c.name = v.candidate)";
+        try (Connection conn = getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, studentID);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    Vote v = new Vote(
+                        rs.getString("timestamp"),
+                        rs.getString("candidate"),
+                        rs.getString("position"),
+                        rs.getString("course"),
+                        rs.getString("year"),
+                        rs.getString("section"),
+                        rs.getString("studentID")
+                    );
+                    out.add(v);
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("❌ Error reading votes for student: " + e.getMessage());
+            e.printStackTrace();
+        }
+        return out;
+    }
+
+    /**
+     * Check if a student has already voted for a specific candidate/position.
+     */
+    public static boolean hasUserVotedForCandidate(String studentID, String candidate, String position) {
+        String sql = "SELECT COUNT(*) FROM votes WHERE studentID = ? AND candidate = ? AND position = ?";
+        try (Connection conn = getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, studentID);
+            pstmt.setString(2, candidate);
+            pstmt.setString(3, position);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1) > 0;
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("❌ Error checking duplicate vote: " + e.getMessage());
+            e.printStackTrace();
+        }
+        return false;
     }
 
     // ============ VOTER DATABASE METHODS ============

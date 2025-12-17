@@ -4,13 +4,16 @@ model\admin\AdminEditCandidates$GradientLabel.class
 model\admin\AdminEditConfirmation$2.class
 model\user\VoteHistoryPage$1.class
 model\admin\AdminRemoveCandidate$GradientLabel.class
+model\admin\AdminViewVotes$5.class
 model\admin\AdminMessageDialog$GradientLabel.class
+model\user\UserApp$3.class
 model\admin\AdminEditCandidates$PaddedComboBox$1.class
 model\admin\AdminRemoveCandidate$3.class
 model\admin\AdminRemoveConfirmation$GradientLabel.class
 model\user\VoteConfirmationDialog$1.class
-model\user\VotingPage$5.class
 model\admin\AdminRemoveCandidate.class
+model\user\VoteHistoryPage$4.class
+model\admin\AdminViewVotes$CandidateVoteData.class
 model\admin\AdminViewVotes$2.class
 model\user\VoteConfirmationDialog.class
 model\user\VotingPage$2.class
@@ -37,6 +40,7 @@ model\admin\AdminEditCandidates$2.class
 Main.class
 model\admin\Admin$2.class
 model\admin\AdminEditConfirmation$1.class
+utils\NormalizationHelper.class
 model\admin\AdminMessageDialog$1.class
 model\admin\AdminAddCandidate$3.class
 model\admin\AdminMessageDialog$2.class
@@ -73,6 +77,7 @@ model\admin\AdminAddCandidate$2.class
 model\user\UserApp$1.class
 connectionDB\Voter.class
 model\admin\AdminEditConfirmation.class
+model\admin\AdminEditCandidates$5.class
 model\admin\Admin$5.class
 model\admin\AdminAddCandidate$PaddedComboBox$1.class
 Main$1.class

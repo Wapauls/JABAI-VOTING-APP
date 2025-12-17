@@ -8,9 +8,8 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
 import java.awt.image.BufferedImage;
-import java.io.File;
-import java.io.IOException;
 import javax.imageio.ImageIO;
+import utils.ResourceLoader;
 
 public class MessageDialog extends JFrame {
     private JPanel mainPanel;
@@ -20,6 +19,9 @@ public class MessageDialog extends JFrame {
     private JLabel sectionBar;
     private JLabel messageLabel;
     private JButton okButton;
+    private JButton cancelButton;
+    private Runnable onOk;
+    private Runnable onCancel;
     
     // For dragging
     private int dragX = 0;
@@ -28,6 +30,9 @@ public class MessageDialog extends JFrame {
     // Custom fonts
     private Font interBold;
     private Font interRegular;
+
+    // Shared resource loader
+    private final ResourceLoader resourceLoader = ResourceLoader.getInstance();
     
     // Message types
     public static final int WARNING = 0;
@@ -104,6 +109,12 @@ public class MessageDialog extends JFrame {
     }
     
     public MessageDialog(String title, String message, int messageType) {
+        this(title, message, messageType, null, null);
+    }
+
+    public MessageDialog(String title, String message, int messageType, Runnable onOk, Runnable onCancel) {
+        this.onOk = onOk;
+        this.onCancel = onCancel;
         setTitle("Voting System");
         setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
         setSize(424, 259);
@@ -156,10 +167,14 @@ public class MessageDialog extends JFrame {
         closeButton.setFocusPainted(false);
         closeButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
         
-        // Try to load close icon from icons folder
+        // Try to load close icon via ResourceLoader
         try {
-            BufferedImage closeIcon = ImageIO.read(new File("icons/close.png"));
-            closeButton.setIcon(new ImageIcon(closeIcon));
+            ImageIcon closeIcon = resourceLoader.loadIcon("close.png");
+            if (closeIcon != null && closeIcon.getIconWidth() > 0) {
+                closeButton.setIcon(closeIcon);
+            } else {
+                throw new Exception("Close icon not found");
+            }
         } catch (Exception e) {
             // Fallback to text if icon not found
             closeButton.setText("✕");
@@ -181,19 +196,23 @@ public class MessageDialog extends JFrame {
         headerLabel = new JLabel(title);
         headerLabel.setFont(interBold.deriveFont(24f));
         headerLabel.setForeground(Color.WHITE);
-        headerLabel.setBounds(95, 67, 233, 46);
+        headerLabel.setBounds(19, 67, 385, 46);
         headerLabel.setHorizontalAlignment(SwingConstants.CENTER);
         mainPanel.add(headerLabel);
         
         // Message Content
         messageLabel = new MultiLineLabel(message);
-        messageLabel.setFont(interRegular.deriveFont(16f));
+        messageLabel.setFont(interRegular.deriveFont(16f));;
         messageLabel.setBounds(19, 113, 385, 64);
         mainPanel.add(messageLabel);
         
         // OK Button
         okButton = new JButton("OK");
-        okButton.setBounds(153, 205, 118, 30);
+        if (onCancel != null) {
+            okButton.setBounds(70, 205, 118, 30);
+        } else {
+            okButton.setBounds(153, 205, 118, 30);
+        }
         
         // Set button color based on message type
         Color buttonColor;
@@ -220,9 +239,32 @@ public class MessageDialog extends JFrame {
         okButton.setBorder(BorderFactory.createEmptyBorder());
         okButton.setFocusPainted(false);
         okButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        okButton.addActionListener((ActionEvent e) -> dispose());
+        okButton.addActionListener((ActionEvent e) -> {
+            if (onOk != null) {
+                onOk.run();
+            }
+            dispose();
+        });
         
         mainPanel.add(okButton);
+
+        if (onCancel != null) {
+            cancelButton = new JButton("Cancel");
+            cancelButton.setBounds(236, 205, 118, 30);
+            cancelButton.setBackground(new Color(60, 60, 60));
+            cancelButton.setForeground(Color.WHITE);
+            cancelButton.setFont(interRegular.deriveFont(16f));
+            cancelButton.setBorder(BorderFactory.createEmptyBorder());
+            cancelButton.setFocusPainted(false);
+            cancelButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+            cancelButton.addActionListener((ActionEvent e) -> {
+                if (onCancel != null) {
+                    onCancel.run();
+                }
+                dispose();
+            });
+            mainPanel.add(cancelButton);
+        }
         
         add(mainPanel);
         setVisible(true);
@@ -232,24 +274,22 @@ public class MessageDialog extends JFrame {
         SwingUtilities.invokeLater(() -> new MessageDialog("Warning", "Please select a candidate to update."));
     }
     
-    // Method to load custom fonts
+    // Method to load custom fonts using ResourceLoader
     private void loadCustomFonts() {
         try {
             // Load Inter Bold font
-            File boldFontFile = new File("fonts/Inter-Bold.otf");
-            interBold = Font.createFont(Font.TRUETYPE_FONT, boldFontFile).deriveFont(24f);
+            interBold = resourceLoader.loadFont("Inter-Bold.otf", 24f);
             GraphicsEnvironment.getLocalGraphicsEnvironment().registerFont(interBold);
-        } catch (IOException | FontFormatException e) {
+        } catch (Exception e) {
             System.err.println("Could not load Inter Bold font: " + e.getMessage());
             interBold = new Font("Arial", Font.BOLD, 24);
         }
-        
+
         try {
             // Load Inter Regular font
-            File regularFontFile = new File("fonts/Inter-Regular.otf");
-            interRegular = Font.createFont(Font.TRUETYPE_FONT, regularFontFile).deriveFont(16f);
+            interRegular = resourceLoader.loadFont("Inter-Regular.otf", 16f);
             GraphicsEnvironment.getLocalGraphicsEnvironment().registerFont(interRegular);
-        } catch (IOException | FontFormatException e) {
+        } catch (Exception e) {
             System.err.println("Could not load Inter Regular font: " + e.getMessage());
             interRegular = new Font("Arial", Font.PLAIN, 16);
         }

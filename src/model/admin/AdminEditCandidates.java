@@ -4,6 +4,7 @@ import connectionDB.DatabaseHelper;
 import connectionDB.Candidate;
 
 import javax.swing.*;
+import javax.swing.border.Border;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.awt.event.ActionEvent;
@@ -11,9 +12,10 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
 import java.awt.image.BufferedImage;
-import java.io.File;
-import java.io.IOException;
 import javax.imageio.ImageIO;
+import javax.imageio.ImageIO;
+import java.util.Objects;
+import utils.ResourceLoader;
 
 public class AdminEditCandidates extends JFrame {
     private JPanel mainPanel;
@@ -33,6 +35,9 @@ public class AdminEditCandidates extends JFrame {
     private JComboBox<String> yearCombo;
     private JComboBox<String> sectionCombo;
     private String selectedCandidateName = "";
+    private Border defaultFieldBorder;
+    private Border defaultComboBorder;
+    private java.util.Set<String> updatedCandidates = new java.util.HashSet<>();
     
     // For dragging
     private int dragX = 0;
@@ -41,6 +46,9 @@ public class AdminEditCandidates extends JFrame {
     // Custom fonts
     private Font interBold;
     private Font interRegular;
+
+    // Shared resource loader
+    private final ResourceLoader resourceLoader = ResourceLoader.getInstance();
     
     // Custom JLabel class for gradient text
     class GradientLabel extends JLabel {
@@ -109,12 +117,10 @@ public class AdminEditCandidates extends JFrame {
                     button.setFocusPainted(false);
                     button.setCursor(new Cursor(Cursor.HAND_CURSOR));
                     
-                    // Create arrow icon
+                    // Create arrow icon using ResourceLoader
                     try {
-                        // Try to load arrow icon
-                        File arrowDownFile = new File("icons/arrow-down.png");
-                        if (arrowDownFile.exists()) {
-                            ImageIcon arrowIcon = new ImageIcon(ImageIO.read(arrowDownFile));
+                        ImageIcon arrowIcon = resourceLoader.loadIcon("arrow_down.png");
+                        if (arrowIcon != null && arrowIcon.getIconWidth() > 0) {
                             Image scaledIcon = arrowIcon.getImage().getScaledInstance(12, 7, Image.SCALE_SMOOTH);
                             button.setIcon(new ImageIcon(scaledIcon));
                         } else {
@@ -197,10 +203,14 @@ public class AdminEditCandidates extends JFrame {
         closeButton.setFocusPainted(false);
         closeButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
         
-        // Try to load close icon from icons folder
+        // Try to load close icon via ResourceLoader
         try {
-            BufferedImage closeIcon = ImageIO.read(new File("icons/close.png"));
-            closeButton.setIcon(new ImageIcon(closeIcon));
+            ImageIcon closeIcon = resourceLoader.loadIcon("close.png");
+            if (closeIcon != null && closeIcon.getIconWidth() > 0) {
+                closeButton.setIcon(closeIcon);
+            } else {
+                throw new Exception("Close icon not found");
+            }
         } catch (Exception e) {
             // Create a simple X icon as fallback
             BufferedImage xIcon = new BufferedImage(14, 14, BufferedImage.TYPE_INT_ARGB);
@@ -226,7 +236,7 @@ public class AdminEditCandidates extends JFrame {
         
         // Edit Candidate Page Header
         editCandidatePageLabel = new JLabel("Edit Candidates Page");
-        editCandidatePageLabel.setFont(interRegular.deriveFont(24f));
+        editCandidatePageLabel.setFont(interBold.deriveFont(24f));
         editCandidatePageLabel.setForeground(Color.WHITE);
         editCandidatePageLabel.setBounds(217, 65, 405, 47);
         editCandidatePageLabel.setHorizontalAlignment(SwingConstants.CENTER);
@@ -249,6 +259,16 @@ public class AdminEditCandidates extends JFrame {
             BorderFactory.createEmptyBorder(0, 8, 0, 8)
         ));
         mainPanel.add(searchField);
+        // Live search: filter candidate list as the admin types
+        searchField.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
+            private void update() {
+                String query = searchField.getText().trim().toLowerCase();
+                rebuildCandidatesList(query);
+            }
+            public void insertUpdate(javax.swing.event.DocumentEvent e) { update(); }
+            public void removeUpdate(javax.swing.event.DocumentEvent e) { update(); }
+            public void changedUpdate(javax.swing.event.DocumentEvent e) { update(); }
+        });
         
         // Change Name Field
         JLabel changeNameLabel = new JLabel("Change Name");
@@ -267,6 +287,7 @@ public class AdminEditCandidates extends JFrame {
             BorderFactory.createEmptyBorder(0, 8, 0, 8)
         ));
         mainPanel.add(nameField);
+        defaultFieldBorder = nameField.getBorder();
         
         // Change Description Area
         JLabel changeDescriptionLabel = new JLabel("Change Description");
@@ -324,6 +345,7 @@ public class AdminEditCandidates extends JFrame {
         sectionCombo.setBounds(634, 366, 177, 29);
         sectionCombo.setSelectedIndex(0);
         mainPanel.add(sectionCombo);
+        defaultComboBorder = sectionCombo.getBorder();
         
         // List of Candidates Label
         JLabel candidatesLabel = new JLabel("List of Candidates");
@@ -367,44 +389,7 @@ public class AdminEditCandidates extends JFrame {
         candidatesPanel.setLayout(null);
         candidatesPanel.setBackground(new Color(217, 217, 217));
         candidatesPanel.setPreferredSize(new Dimension(369, 1));
-        
-        // Dynamically load candidates from database
-        java.util.List<Candidate> candidates = DatabaseHelper.readCandidates();
-        int yPos = 0;
-        for (Candidate c : candidates) {
-            JLabel candidateLabel = new JLabel(c.name);
-            candidateLabel.setFont(interRegular.deriveFont(14f));
-            candidateLabel.setForeground(new Color(1, 1, 1));
-            candidateLabel.setBounds(5, yPos, 196, 28);
-            candidateLabel.setCursor(new Cursor(Cursor.HAND_CURSOR));
-            
-            String candName = c.name;
-            String candCourse = c.course;
-            String candPosition = c.position;
-            String candYear = c.year;
-            String candSection = c.section;
-            
-            candidateLabel.addMouseListener(new java.awt.event.MouseAdapter() {
-                @Override
-                public void mouseClicked(java.awt.event.MouseEvent e) {
-                    selectCandidate(candidateLabel, candName, candCourse, candPosition, candYear, candSection);
-                }
-            });
-            candidatesPanel.add(candidateLabel);
-            
-            JLabel statusLabel = new JLabel("Updated");
-            statusLabel.setFont(interRegular.deriveFont(14f));
-            statusLabel.setForeground(new Color(1, 1, 1));
-            statusLabel.setBounds(280, yPos, 89, 28);
-            statusLabel.setHorizontalAlignment(SwingConstants.CENTER);
-            candidatesPanel.add(statusLabel);
-            
-            yPos += 19;
-        }
-        // Set preferred size based on number of candidates
-        if (yPos > 0) {
-            candidatesPanel.setPreferredSize(new Dimension(369, yPos));
-        }
+        rebuildCandidatesList("");
         
         // Wrap only content in scroll pane (header is fixed above)
         JScrollPane candidatesScrollPane = new JScrollPane(candidatesPanel);
@@ -440,6 +425,7 @@ public class AdminEditCandidates extends JFrame {
         updateButton.setFocusPainted(false);
         updateButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
         updateButton.addActionListener((ActionEvent e) -> {
+            resetBorders();
             if (selectedCandidateName == null || selectedCandidateName.isEmpty()) {
                 new AdminMessageDialog("No selection", "Please select a candidate to update.", AdminMessageDialog.WARNING);
                 return;
@@ -452,37 +438,64 @@ public class AdminEditCandidates extends JFrame {
             String newYear = (String) yearCombo.getSelectedItem();
             String newSection = (String) sectionCombo.getSelectedItem();
 
-            if (newName.isEmpty()) {
-                new AdminMessageDialog("Validation Error", "Candidate name cannot be empty.", AdminMessageDialog.ERROR);
+            boolean invalid = false;
+            if (newName.isEmpty()) { nameField.setBorder(BorderFactory.createLineBorder(Color.RED, 1)); invalid = true; }
+            if ("Change a Course".equals(newCourse)) { coursesCombo.setBorder(BorderFactory.createLineBorder(Color.RED, 1)); invalid = true; }
+            if ("Change a Position".equals(newPosition)) { positionCombo.setBorder(BorderFactory.createLineBorder(Color.RED, 1)); invalid = true; }
+            if ("Change a Year".equals(newYear)) { yearCombo.setBorder(BorderFactory.createLineBorder(Color.RED, 1)); invalid = true; }
+            if ("Change a Section".equals(newSection)) { sectionCombo.setBorder(BorderFactory.createLineBorder(Color.RED, 1)); invalid = true; }
+
+            if (invalid) {
+                new AdminMessageDialog("Missing data", "Fill all required fields before updating.", AdminMessageDialog.WARNING);
                 return;
             }
-
-            int confirm = JOptionPane.showConfirmDialog(this, "Save changes to candidate?", "Confirm Update", JOptionPane.YES_NO_OPTION);
-            if (confirm != JOptionPane.YES_OPTION) return;
 
             Candidate updated = new Candidate(newName, newPosition, newCourse, newYear, newSection, newDesc);
-            boolean ok = DatabaseHelper.updateCandidate(selectedCandidateName, updated);
-            if (!ok) {
-                new AdminMessageDialog("Error", "Could not find candidate in database. Update failed.", AdminMessageDialog.ERROR);
-                return;
-            }
-
-            // Update label in UI candidates panel
-            for (Component comp : candidatesPanel.getComponents()) {
-                if (comp instanceof JLabel) {
-                    JLabel lab = (JLabel) comp;
-                    if (lab.getText().equals(selectedCandidateName)) {
-                        lab.setText(newName);
-                        lab.setForeground(new Color(72, 248, 254));
-                        break;
+            AdminEditConfirmation confirmDialog = new AdminEditConfirmation(
+                newName,
+                newPosition,
+                this,
+                () -> {
+                    boolean ok = DatabaseHelper.updateCandidate(selectedCandidateName, updated);
+                    if (!ok) {
+                        new AdminMessageDialog("Error", "Could not find candidate in database. Update failed.", AdminMessageDialog.ERROR);
+                        return;
                     }
+
+                    updatedCandidates.add(newName);
+
+                    // Update labels in UI candidates panel
+                    JLabel selectedLabelRef = null;
+                    int selectedY = -1;
+                    for (Component comp : candidatesPanel.getComponents()) {
+                        if (comp instanceof JLabel) {
+                            JLabel lab = (JLabel) comp;
+                            if (lab.getText().equals(selectedCandidateName) && lab.getBounds().x == 5) {
+                                lab.setText(newName);
+                                lab.setForeground(new Color(72, 248, 254));
+                                selectedLabelRef = lab;
+                                selectedY = lab.getBounds().y;
+                            }
+                        }
+                    }
+                    // Update corresponding status label to "Updated"
+                    if (selectedY >= 0) {
+                        for (Component comp : candidatesPanel.getComponents()) {
+                            if (comp instanceof JLabel) {
+                                JLabel lab = (JLabel) comp;
+                                if (lab.getBounds().x == 280 && lab.getBounds().y == selectedY) {
+                                    lab.setText("Updated");
+                                    break;
+                                }
+                            }
+                        }
+                    }
+
+                    selectedCandidateName = newName;
+                    new AdminMessageDialog("Success", "Candidate updated successfully.", AdminMessageDialog.INFO);
                 }
-            }
-
-            // update selectedCandidateName to newName
-            selectedCandidateName = newName;
-
-            new AdminMessageDialog("Success", "Candidate updated successfully.", AdminMessageDialog.INFO);
+            );
+            confirmDialog.setVisible(true);
         });
         mainPanel.add(updateButton);
         
@@ -496,9 +509,22 @@ public class AdminEditCandidates extends JFrame {
         backButton.setFocusPainted(false);
         backButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
         backButton.addActionListener((ActionEvent e) -> {
-            // Return to Admin
-            SwingUtilities.invokeLater(() -> new model.admin.Admin());
-            dispose();
+            // If there are unsaved changes, confirm with the admin
+            if (hasUnsavedChanges()) {
+                new model.user.MessageDialog(
+                    "Unsaved Changes",
+                    "You have unsaved changes.\nLeave without saving?",
+                    model.user.MessageDialog.WARNING,
+                    () -> {
+                        SwingUtilities.invokeLater(() -> new model.admin.Admin());
+                        dispose();
+                    },
+                    () -> { /* cancel, stay on page */ }
+                );
+            } else {
+                SwingUtilities.invokeLater(() -> new model.admin.Admin());
+                dispose();
+            }
         });
         mainPanel.add(backButton);
         
@@ -548,28 +574,121 @@ public class AdminEditCandidates extends JFrame {
         }
     }
 
+    /**
+     * Detect whether the current form differs from the selected candidate's stored values.
+     */
+    private boolean hasUnsavedChanges() {
+        if (selectedCandidateName == null || selectedCandidateName.isEmpty()) {
+            return false;
+        }
+        java.util.List<Candidate> list = DatabaseHelper.readCandidates();
+        Candidate found = null;
+        for (Candidate c : list) {
+            if (c.name.equals(selectedCandidateName)) {
+                found = c;
+                break;
+            }
+        }
+        if (found == null) {
+            // Candidate not found; treat edits as unsaved if any field is non-empty
+            return !nameField.getText().trim().isEmpty()
+                    || !descriptionArea.getText().trim().isEmpty();
+        }
+
+        String formName = nameField.getText().trim();
+        String formDesc = descriptionArea.getText().trim();
+        String formCourse = (String) coursesCombo.getSelectedItem();
+        String formPosition = (String) positionCombo.getSelectedItem();
+        String formYear = (String) yearCombo.getSelectedItem();
+        String formSection = (String) sectionCombo.getSelectedItem();
+
+        return !found.name.equals(formName)
+                || !Objects.toString(found.description, "").equals(formDesc)
+                || !Objects.toString(found.course, coursesCombo.getItemAt(0)).equals(formCourse)
+                || !Objects.toString(found.position, positionCombo.getItemAt(0)).equals(formPosition)
+                || !Objects.toString(found.year, yearCombo.getItemAt(0)).equals(formYear)
+                || !Objects.toString(found.section, sectionCombo.getItemAt(0)).equals(formSection);
+    }
+
+    /**
+     * Rebuild the candidates list panel, optionally filtering by a name fragment.
+     */
+    private void rebuildCandidatesList(String nameFilterLower) {
+        candidatesPanel.removeAll();
+        java.util.List<Candidate> candidates = DatabaseHelper.readCandidates();
+        int yPos = 0;
+        for (Candidate c : candidates) {
+            if (nameFilterLower != null && !nameFilterLower.isEmpty()
+                    && !c.name.toLowerCase().contains(nameFilterLower)) {
+                continue;
+            }
+
+            JLabel candidateLabel = new JLabel(c.name + " (" + c.position + ")");
+            candidateLabel.setFont(interRegular.deriveFont(14f));
+            candidateLabel.setForeground(new Color(1, 1, 1));
+            candidateLabel.setBounds(5, yPos, 364, 28);
+            candidateLabel.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
+            String candName = c.name;
+            String candCourse = c.course;
+            String candPosition = c.position;
+            String candYear = c.year;
+            String candSection = c.section;
+
+            candidateLabel.addMouseListener(new java.awt.event.MouseAdapter() {
+                @Override
+                public void mouseClicked(java.awt.event.MouseEvent e) {
+                    selectCandidate(candidateLabel, candName, candCourse, candPosition, candYear, candSection);
+                }
+            });
+            candidatesPanel.add(candidateLabel);
+
+            JLabel statusLabel = new JLabel(updatedCandidates.contains(c.name) ? "Updated" : "Original");
+            statusLabel.setFont(interRegular.deriveFont(14f));
+            statusLabel.setForeground(new Color(1, 1, 1));
+            statusLabel.setBounds(280, yPos, 89, 28);
+            statusLabel.setHorizontalAlignment(SwingConstants.CENTER);
+            candidatesPanel.add(statusLabel);
+
+            yPos += 19;
+        }
+        if (yPos > 0) {
+            candidatesPanel.setPreferredSize(new Dimension(369, yPos));
+        } else {
+            candidatesPanel.setPreferredSize(new Dimension(369, 1));
+        }
+        candidatesPanel.revalidate();
+        candidatesPanel.repaint();
+    }
+
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> new model.admin.AdminEditCandidates());
     }
     
-    // Method to load custom fonts
+    private void resetBorders() {
+        nameField.setBorder(defaultFieldBorder);
+        coursesCombo.setBorder(defaultComboBorder);
+        positionCombo.setBorder(defaultComboBorder);
+        yearCombo.setBorder(defaultComboBorder);
+        sectionCombo.setBorder(defaultComboBorder);
+    }
+    
+    // Method to load custom fonts using ResourceLoader
     private void loadCustomFonts() {
         try {
             // Load Inter Bold font
-            File boldFontFile = new File("fonts/Inter-Bold.otf");
-            interBold = Font.createFont(Font.TRUETYPE_FONT, boldFontFile).deriveFont(24f);
+            interBold = resourceLoader.loadFont("Inter-Bold.otf", 24f);
             GraphicsEnvironment.getLocalGraphicsEnvironment().registerFont(interBold);
-        } catch (IOException | FontFormatException e) {
+        } catch (Exception e) {
             System.err.println("Could not load Inter Bold font: " + e.getMessage());
             interBold = new Font("Arial", Font.BOLD, 24);
         }
-        
+
         try {
             // Load Inter Regular font
-            File regularFontFile = new File("fonts/Inter-Regular.otf");
-            interRegular = Font.createFont(Font.TRUETYPE_FONT, regularFontFile).deriveFont(16f);
+            interRegular = resourceLoader.loadFont("Inter-Regular.otf", 16f);
             GraphicsEnvironment.getLocalGraphicsEnvironment().registerFont(interRegular);
-        } catch (IOException | FontFormatException e) {
+        } catch (Exception e) {
             System.err.println("Could not load Inter Regular font: " + e.getMessage());
             interRegular = new Font("Arial", Font.PLAIN, 16);
         }

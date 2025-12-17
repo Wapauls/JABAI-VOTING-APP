@@ -8,9 +8,9 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
 import java.awt.image.BufferedImage;
-import java.io.File;
-import java.io.IOException;
 import javax.imageio.ImageIO;
+import javax.imageio.ImageIO;
+import utils.ResourceLoader;
 import connectionDB.DatabaseHelper;
 import connectionDB.Candidate;
 import connectionDB.Vote;
@@ -44,6 +44,9 @@ public class AdminViewVotes extends JFrame {
     // Custom fonts
     private Font interBold;
     private Font interRegular;
+
+    // Shared resource loader
+    private final ResourceLoader resourceLoader = ResourceLoader.getInstance();
     
     // Custom JLabel class for gradient text
     class GradientLabel extends JLabel {
@@ -112,12 +115,10 @@ public class AdminViewVotes extends JFrame {
                     button.setFocusPainted(false);
                     button.setCursor(new Cursor(Cursor.HAND_CURSOR));
                     
-                    // Create arrow icon
+                    // Create arrow icon using ResourceLoader
                     try {
-                        // Try to load arrow icon
-                        File arrowDownFile = new File("icons/arrow-down.png");
-                        if (arrowDownFile.exists()) {
-                            ImageIcon arrowIcon = new ImageIcon(ImageIO.read(arrowDownFile));
+                        ImageIcon arrowIcon = resourceLoader.loadIcon("arrow_down.png");
+                        if (arrowIcon != null && arrowIcon.getIconWidth() > 0) {
                             Image scaledIcon = arrowIcon.getImage().getScaledInstance(12, 7, Image.SCALE_SMOOTH);
                             button.setIcon(new ImageIcon(scaledIcon));
                         } else {
@@ -200,10 +201,14 @@ public class AdminViewVotes extends JFrame {
         closeButton.setFocusPainted(false);
         closeButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
         
-        // Try to load close icon from icons folder
+        // Try to load close icon via ResourceLoader
         try {
-            BufferedImage closeIcon = ImageIO.read(new File("icons/close.png"));
-            closeButton.setIcon(new ImageIcon(closeIcon));
+            ImageIcon closeIcon = resourceLoader.loadIcon("close.png");
+            if (closeIcon != null && closeIcon.getIconWidth() > 0) {
+                closeButton.setIcon(closeIcon);
+            } else {
+                throw new Exception("Close icon not found");
+            }
         } catch (Exception e) {
             // Create a simple X icon as fallback
             BufferedImage xIcon = new BufferedImage(14, 14, BufferedImage.TYPE_INT_ARGB);
@@ -229,7 +234,7 @@ public class AdminViewVotes extends JFrame {
         
         // View Votes Page Header
         viewVotesPageLabel = new JLabel("View Votes Page");
-        viewVotesPageLabel.setFont(interRegular.deriveFont(24f));
+        viewVotesPageLabel.setFont(interBold.deriveFont(24f));
         viewVotesPageLabel.setForeground(Color.WHITE);
         viewVotesPageLabel.setBounds(217, 65, 405, 47);
         viewVotesPageLabel.setHorizontalAlignment(SwingConstants.CENTER);
@@ -251,6 +256,16 @@ public class AdminViewVotes extends JFrame {
             BorderFactory.createLineBorder(new Color(180, 180, 180), 1),
             BorderFactory.createEmptyBorder(0, 8, 0, 8)
         ));
+        // Live search: filter candidate list as admin types
+        searchField.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
+            private void update() {
+                String query = searchField.getText().trim().toLowerCase();
+                filterCandidatesByName(query);
+            }
+            public void insertUpdate(javax.swing.event.DocumentEvent e) { update(); }
+            public void removeUpdate(javax.swing.event.DocumentEvent e) { update(); }
+            public void changedUpdate(javax.swing.event.DocumentEvent e) { update(); }
+        });
         mainPanel.add(searchField);
         
         // Selected Candidate Label
@@ -335,10 +350,10 @@ public class AdminViewVotes extends JFrame {
         java.util.List<Candidate> candidates = DatabaseHelper.readCandidates();
         int yPos = 0;
         for (Candidate c : candidates) {
-            JLabel candidateLabel = new JLabel(c.name);
+            JLabel candidateLabel = new JLabel(c.name + " (" + c.position + ")");
             candidateLabel.setFont(interRegular.deriveFont(14f));
             candidateLabel.setForeground(new Color(1, 1, 1));
-            candidateLabel.setBounds(5, yPos, 196, 28);
+            candidateLabel.setBounds(5, yPos, 364, 28);
             candidateLabel.setCursor(new Cursor(Cursor.HAND_CURSOR));
             
             String candName = c.name;
@@ -413,11 +428,11 @@ public class AdminViewVotes extends JFrame {
         yearCombo.addActionListener((ActionEvent e) -> filterAndDisplayCandidates());
         sectionCombo.addActionListener((ActionEvent e) -> filterAndDisplayCandidates());
         
-        // Votes Graph Panel
-        votesGraphPanel = new JPanel();
-        votesGraphPanel.setLayout(null);
-        votesGraphPanel.setBounds(431, 259, 379, 188);
-        votesGraphPanel.setBackground(new Color(217, 217, 217));
+        // Votes Graph Header Panel (OUTSIDE scrollpane)
+        JPanel votesHeaderPanel = new JPanel();
+        votesHeaderPanel.setLayout(null);
+        votesHeaderPanel.setBackground(new Color(217, 217, 217));
+        votesHeaderPanel.setBounds(431, 259, 379, 30);
         
         // Graph headers
         JLabel graphNameHeader = new JLabel("Name");
@@ -425,77 +440,47 @@ public class AdminViewVotes extends JFrame {
         graphNameHeader.setForeground(new Color(1, 1, 1));
         graphNameHeader.setBounds(5, 0, 45, 28);
         graphNameHeader.setHorizontalAlignment(SwingConstants.CENTER);
-        votesGraphPanel.add(graphNameHeader);
+        votesHeaderPanel.add(graphNameHeader);
         
         JLabel votesHeader = new JLabel("Votes");
         votesHeader.setFont(interRegular.deriveFont(14f));
         votesHeader.setForeground(new Color(1, 1, 1));
         votesHeader.setBounds(201, 0, 77, 28);
         votesHeader.setHorizontalAlignment(SwingConstants.CENTER);
-        votesGraphPanel.add(votesHeader);
+        votesHeaderPanel.add(votesHeader);
         
         JLabel percentageHeader = new JLabel("Percentage");
         percentageHeader.setFont(interRegular.deriveFont(14f));
         percentageHeader.setForeground(new Color(1, 1, 1));
         percentageHeader.setBounds(278, 0, 96, 28);
         percentageHeader.setHorizontalAlignment(SwingConstants.CENTER);
-        votesGraphPanel.add(percentageHeader);
+        votesHeaderPanel.add(percentageHeader);
         
         // Graph separator line
-        JSeparator graphSeparator = new JSeparator();
-        graphSeparator.setBackground(new Color(97, 97, 97));
-        graphSeparator.setForeground(new Color(97, 97, 97));
-        graphSeparator.setBounds(5, 29, 369, 1);
-        votesGraphPanel.add(graphSeparator);
+        JSeparator votesGraphSeparator = new JSeparator();
+        votesGraphSeparator.setBackground(new Color(97, 97, 97));
+        votesGraphSeparator.setForeground(new Color(97, 97, 97));
+        votesGraphSeparator.setBounds(5, 29, 369, 1);
+        votesHeaderPanel.add(votesGraphSeparator);
         
-        // Dynamically load candidates and calculate vote counts
-        java.util.List<Candidate> graphCandidates = DatabaseHelper.readCandidates();
-        java.util.List<Vote> allVotes = DatabaseHelper.readVotes();
+        mainPanel.add(votesHeaderPanel);
         
-        // Calculate total votes
-        int totalVotes = allVotes.size();
+        // Votes Graph Panel (wrapped in scrollpane - BELOW header)
+        votesGraphPanel = new JPanel();
+        votesGraphPanel.setLayout(null);
+        votesGraphPanel.setBackground(new Color(217, 217, 217));
+        votesGraphPanel.setPreferredSize(new Dimension(369, 1));
         
-        int graphYPos = 28;
-        for (Candidate c : graphCandidates) {
-            // Count votes for this candidate
-            int candidateVotes = 0;
-            for (Vote v : allVotes) {
-                if (v.candidate.equals(c.name)) {
-                    candidateVotes++;
-                }
-            }
-            
-            // Calculate percentage
-            double percentage = totalVotes > 0 ? (double) candidateVotes / totalVotes * 100 : 0;
-            String percentageStr = String.format("%.2f%%", percentage);
-            
-            // Candidate name
-            JLabel graphCandidate = new JLabel(c.name);
-            graphCandidate.setFont(interRegular.deriveFont(14f));
-            graphCandidate.setForeground(new Color(1, 1, 1));
-            graphCandidate.setBounds(5, graphYPos, 196, 28);
-            votesGraphPanel.add(graphCandidate);
-            
-            // Vote count
-            JLabel votes = new JLabel(String.valueOf(candidateVotes));
-            votes.setFont(interRegular.deriveFont(14f));
-            votes.setForeground(new Color(1, 1, 1));
-            votes.setBounds(201, graphYPos, 77, 28);
-            votes.setHorizontalAlignment(SwingConstants.CENTER);
-            votesGraphPanel.add(votes);
-            
-            // Percentage
-            JLabel percentageLabel = new JLabel(percentageStr);
-            percentageLabel.setFont(interRegular.deriveFont(14f));
-            percentageLabel.setForeground(new Color(1, 1, 1));
-            percentageLabel.setBounds(278, graphYPos, 96, 28);
-            percentageLabel.setHorizontalAlignment(SwingConstants.CENTER);
-            votesGraphPanel.add(percentageLabel);
-            
-            graphYPos += 19;
-        }
+        JScrollPane votesGraphScrollPane = new JScrollPane(votesGraphPanel);
+        votesGraphScrollPane.setBounds(431, 289, 379, 158);
+        votesGraphScrollPane.setBorder(BorderFactory.createEmptyBorder());
+        votesGraphScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+        votesGraphScrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
         
-        mainPanel.add(votesGraphPanel);
+        // Rebuild votes graph with proper categorization
+        rebuildVotesGraph();
+        
+        mainPanel.add(votesGraphScrollPane);
         
         // Back Button - exact design
         backButton = new JButton("← Back");
@@ -524,36 +509,41 @@ public class AdminViewVotes extends JFrame {
         String selectedYear = (String) yearCombo.getSelectedItem();
         String selectedSection = (String) sectionCombo.getSelectedItem();
         
-        // Remove all candidate labels except header and separator
-        java.util.List<Component> toRemove = new java.util.ArrayList<>();
-        for (Component comp : candidatesPanel.getComponents()) {
-            if (comp instanceof JLabel) {
-                JLabel lbl = (JLabel) comp;
-                if (!"Name".equals(lbl.getText())) {
-                    toRemove.add(comp);
-                }
-            }
-        }
-        for (Component comp : toRemove) {
-            candidatesPanel.remove(comp);
-        }
+        // Rebuild with filters
+        String searchQuery = searchField.getText().trim().toLowerCase();
+        rebuildCandidatesList(searchQuery, selectedCourse, selectedPosition, selectedYear, selectedSection);
         
-        // Load all candidates from database
+        // Also rebuild votes graph with same filters
+        rebuildVotesGraph(selectedCourse, selectedPosition, selectedYear, selectedSection);
+    }
+    
+    // Rebuild candidates list with optional name filter
+    private void rebuildCandidatesList(String nameFilter) {
+        rebuildCandidatesList(nameFilter, null, null, null, null);
+    }
+    
+    private void rebuildCandidatesList(String nameFilter, String selectedCourse, String selectedPosition, String selectedYear, String selectedSection) {
+        candidatesPanel.removeAll();
         java.util.List<Candidate> candidates = DatabaseHelper.readCandidates();
-        int yPos = 28;
+        int yPos = 0;
         
-        // Filter and display candidates based on selected criteria
         for (Candidate c : candidates) {
-            boolean matchesCourse = selectedCourse.equals("Select a Course") || c.course.equals(selectedCourse);
-            boolean matchesPosition = selectedPosition.equals("Select a Position") || c.position.equals(selectedPosition);
-            boolean matchesYear = selectedYear.equals("Select a Year") || c.year.equals(selectedYear);
-            boolean matchesSection = selectedSection.equals("Select a Section") || c.section.equals(selectedSection);
+            // Apply name filter if provided
+            if (nameFilter != null && !nameFilter.isEmpty() && !c.name.toLowerCase().contains(nameFilter)) {
+                continue;
+            }
+            
+            // Apply other filters if provided
+            boolean matchesCourse = selectedCourse == null || selectedCourse.equals("Select a Course") || c.course.equals(selectedCourse);
+            boolean matchesPosition = selectedPosition == null || selectedPosition.equals("Select a Position") || c.position.equals(selectedPosition);
+            boolean matchesYear = selectedYear == null || selectedYear.equals("Select a Year") || c.year.equals(selectedYear);
+            boolean matchesSection = selectedSection == null || selectedSection.equals("Select a Section") || c.section.equals(selectedSection);
             
             if (matchesCourse && matchesPosition && matchesYear && matchesSection) {
-                JLabel candidateLabel = new JLabel(c.name);
+                JLabel candidateLabel = new JLabel(c.name + " (" + c.position + ")");
                 candidateLabel.setFont(interRegular.deriveFont(14f));
                 candidateLabel.setForeground(new Color(1, 1, 1));
-                candidateLabel.setBounds(5, yPos, 196, 28);
+                candidateLabel.setBounds(5, yPos, 364, 28);
                 candidateLabel.setCursor(new Cursor(Cursor.HAND_CURSOR));
                 
                 String candName = c.name;
@@ -568,8 +558,21 @@ public class AdminViewVotes extends JFrame {
             }
         }
         
+        if (yPos > 0) {
+            candidatesPanel.setPreferredSize(new Dimension(369, yPos));
+        } else {
+            candidatesPanel.setPreferredSize(new Dimension(369, 1));
+        }
         candidatesPanel.revalidate();
         candidatesPanel.repaint();
+    }
+    
+    private void filterCandidatesByName(String nameFilter) {
+        String selectedCourse = (String) coursesCombo.getSelectedItem();
+        String selectedPosition = (String) positionCombo.getSelectedItem();
+        String selectedYear = (String) yearCombo.getSelectedItem();
+        String selectedSection = (String) sectionCombo.getSelectedItem();
+        rebuildCandidatesList(nameFilter, selectedCourse, selectedPosition, selectedYear, selectedSection);
     }
     
     // Method to handle candidate selection
@@ -606,7 +609,8 @@ public class AdminViewVotes extends JFrame {
             yearLabel.setText("Year: " + foundCandidate.year);
             sectionLabel.setText("Section: " + foundCandidate.section);
             
-            // Calculate rank position based on votes
+            // Calculate rank position based on votes within same category (position+course+year+section)
+            String candidateCategory = foundCandidate.position + "|" + foundCandidate.course + "|" + foundCandidate.year + "|" + foundCandidate.section;
             int candidateVotes = 0;
             for (Vote v : allVotes) {
                 if (v.candidate.equals(candidateName)) {
@@ -614,10 +618,11 @@ public class AdminViewVotes extends JFrame {
                 }
             }
             
-            // Count how many candidates have more votes
+            // Count how many candidates in same category have more votes
             int rank = 1;
             for (Candidate c : candidates) {
-                if (c.position.equals(foundCandidate.position)) {
+                String otherCategory = c.position + "|" + c.course + "|" + c.year + "|" + c.section;
+                if (otherCategory.equals(candidateCategory) && !c.name.equals(candidateName)) {
                     int otherVotes = 0;
                     for (Vote v : allVotes) {
                         if (v.candidate.equals(c.name)) {
@@ -653,29 +658,182 @@ public class AdminViewVotes extends JFrame {
             default: return rank + "th";
         }
     }
+    
+    // Rebuild votes graph with proper categorization by position and course
+    private void rebuildVotesGraph() {
+        rebuildVotesGraph(null, null, null, null);
+    }
+    
+    private void rebuildVotesGraph(String filterCourse, String filterPosition, String filterYear, String filterSection) {
+        votesGraphPanel.removeAll();
+        
+        java.util.List<Candidate> allCandidates = DatabaseHelper.readCandidates();
+        java.util.List<Vote> allVotes = DatabaseHelper.readVotes();
+        
+        // Group votes by category: position + course + year + section
+        java.util.Map<String, java.util.List<Vote>> categoryVotes = new java.util.HashMap<>();
+        java.util.Map<String, Candidate> candidateMap = new java.util.HashMap<>();
+        
+        for (Candidate c : allCandidates) {
+            // Apply filters
+            if (filterCourse != null && !filterCourse.equals("Select a Course") && !c.course.equals(filterCourse)) {
+                continue;
+            }
+            if (filterPosition != null && !filterPosition.equals("Select a Position") && !c.position.equals(filterPosition)) {
+                continue;
+            }
+            if (filterYear != null && !filterYear.equals("Select a Year") && !c.year.equals(filterYear)) {
+                continue;
+            }
+            if (filterSection != null && !filterSection.equals("Select a Section") && !c.section.equals(filterSection)) {
+                continue;
+            }
+            
+            String category = c.position + "|" + c.course + "|" + c.year + "|" + c.section;
+            candidateMap.put(c.name, c);
+            
+            if (!categoryVotes.containsKey(category)) {
+                categoryVotes.put(category, new java.util.ArrayList<>());
+            }
+        }
+        
+        // Count votes per candidate within each category
+        for (Vote v : allVotes) {
+            Candidate c = candidateMap.get(v.candidate);
+            if (c != null) {
+                String category = c.position + "|" + c.course + "|" + c.year + "|" + c.section;
+                if (categoryVotes.containsKey(category)) {
+                    categoryVotes.get(category).add(v);
+                }
+            }
+        }
+        
+        // Create candidate-vote pairs for sorting
+        java.util.List<CandidateVoteData> candidateVoteDataList = new java.util.ArrayList<>();
+        for (Candidate c : candidateMap.values()) {
+            String category = c.position + "|" + c.course + "|" + c.year + "|" + c.section;
+            java.util.List<Vote> categoryVoteList = categoryVotes.get(category);
+            if (categoryVoteList == null) {
+                categoryVoteList = new java.util.ArrayList<>();
+            }
+            
+            // Count votes for this specific candidate
+            int candidateVotes = 0;
+            for (Vote v : categoryVoteList) {
+                if (v.candidate.equals(c.name)) {
+                    candidateVotes++;
+                }
+            }
+            
+            // Calculate percentage within the category (position+course+year+section)
+            int totalCategoryVotes = categoryVoteList.size();
+            double percentage = totalCategoryVotes > 0 ? (double) candidateVotes / totalCategoryVotes * 100 : 0;
+            
+            candidateVoteDataList.add(new CandidateVoteData(c, candidateVotes, percentage, category));
+        }
+        
+        // Sort: by position order, then by course, then by votes (descending)
+        java.util.Map<String, Integer> positionOrder = new java.util.HashMap<>();
+        positionOrder.put("President", 1);
+        positionOrder.put("Vice President", 2);
+        positionOrder.put("Secretary", 3);
+        positionOrder.put("Treasurer", 4);
+        positionOrder.put("Auditor", 5);
+        
+        candidateVoteDataList.sort((a, b) -> {
+            int posA = positionOrder.getOrDefault(a.candidate.position, 99);
+            int posB = positionOrder.getOrDefault(b.candidate.position, 99);
+            if (posA != posB) {
+                return Integer.compare(posA, posB);
+            }
+            // Same position: sort by course
+            String courseA = a.candidate.course == null ? "" : a.candidate.course;
+            String courseB = b.candidate.course == null ? "" : b.candidate.course;
+            int courseCompare = courseA.compareTo(courseB);
+            if (courseCompare != 0) {
+                return courseCompare;
+            }
+            // Same position and course: sort by votes (descending - top votes first)
+            return Integer.compare(b.votes, a.votes);
+        });
+        
+        int graphYPos = 0;
+        for (CandidateVoteData data : candidateVoteDataList) {
+            Candidate c = data.candidate;
+            int candidateVotes = data.votes;
+            double percentage = data.percentage;
+            String percentageStr = String.format("%.0f%%", percentage);
+            
+            // Display format: Show candidate name only (no position)
+            String displayName = c.name;
+            
+            // Candidate name
+            JLabel graphCandidate = new JLabel(displayName);
+            graphCandidate.setFont(interRegular.deriveFont(14f));
+            graphCandidate.setForeground(new Color(1, 1, 1));
+            graphCandidate.setBounds(5, graphYPos, 364, 28);
+            votesGraphPanel.add(graphCandidate);
+            
+            // Vote count
+            JLabel votes = new JLabel(candidateVotes + " votes");
+            votes.setFont(interRegular.deriveFont(14f));
+            votes.setForeground(new Color(1, 1, 1));
+            votes.setBounds(201, graphYPos, 77, 28);
+            votes.setHorizontalAlignment(SwingConstants.CENTER);
+            votesGraphPanel.add(votes);
+            
+            // Percentage
+            JLabel percentageLabel = new JLabel(percentageStr);
+            percentageLabel.setFont(interRegular.deriveFont(14f));
+            percentageLabel.setForeground(new Color(1, 1, 1));
+            percentageLabel.setBounds(278, graphYPos, 96, 28);
+            percentageLabel.setHorizontalAlignment(SwingConstants.CENTER);
+            votesGraphPanel.add(percentageLabel);
+            
+            graphYPos += 19;
+        }
+        
+        // Update preferred size for scrollpane
+        votesGraphPanel.setPreferredSize(new Dimension(369, Math.max(graphYPos, 28)));
+        votesGraphPanel.revalidate();
+        votesGraphPanel.repaint();
+    }
 
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> new model.admin.AdminViewVotes());
     }
     
-    // Method to load custom fonts
+    // Helper class to hold candidate vote data for sorting
+    private static class CandidateVoteData {
+        Candidate candidate;
+        int votes;
+        double percentage;
+        String category;
+        
+        CandidateVoteData(Candidate candidate, int votes, double percentage, String category) {
+            this.candidate = candidate;
+            this.votes = votes;
+            this.percentage = percentage;
+            this.category = category;
+        }
+    }
+    
+    // Method to load custom fonts using ResourceLoader
     private void loadCustomFonts() {
         try {
             // Load Inter Bold font
-            File boldFontFile = new File("fonts/Inter-Bold.otf");
-            interBold = Font.createFont(Font.TRUETYPE_FONT, boldFontFile).deriveFont(24f);
+            interBold = resourceLoader.loadFont("Inter-Bold.otf", 24f);
             GraphicsEnvironment.getLocalGraphicsEnvironment().registerFont(interBold);
-        } catch (IOException | FontFormatException e) {
+        } catch (Exception e) {
             System.err.println("Could not load Inter Bold font: " + e.getMessage());
             interBold = new Font("Arial", Font.BOLD, 24);
         }
-        
+
         try {
             // Load Inter Regular font
-            File regularFontFile = new File("fonts/Inter-Regular.otf");
-            interRegular = Font.createFont(Font.TRUETYPE_FONT, regularFontFile).deriveFont(16f);
+            interRegular = resourceLoader.loadFont("Inter-Regular.otf", 16f);
             GraphicsEnvironment.getLocalGraphicsEnvironment().registerFont(interRegular);
-        } catch (IOException | FontFormatException e) {
+        } catch (Exception e) {
             System.err.println("Could not load Inter Regular font: " + e.getMessage());
             interRegular = new Font("Arial", Font.PLAIN, 16);
         }

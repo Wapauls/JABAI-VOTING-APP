@@ -11,9 +11,9 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
 import java.awt.image.BufferedImage;
-import java.io.File;
-import java.io.IOException;
 import javax.imageio.ImageIO;
+import javax.imageio.ImageIO;
+import utils.ResourceLoader;
 
 public class AdminRemoveCandidate extends JFrame {
     private JPanel mainPanel;
@@ -40,6 +40,9 @@ public class AdminRemoveCandidate extends JFrame {
     // Custom fonts
     private Font interBold;
     private Font interRegular;
+
+    // Shared resource loader
+    private final ResourceLoader resourceLoader = ResourceLoader.getInstance();
     
     // Custom JLabel class for gradient text
     class GradientLabel extends JLabel {
@@ -126,10 +129,14 @@ public class AdminRemoveCandidate extends JFrame {
         closeButton.setFocusPainted(false);
         closeButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
         
-        // Try to load close icon from icons folder
+        // Try to load close icon via ResourceLoader
         try {
-            BufferedImage closeIcon = ImageIO.read(new File("icons/close.png"));
-            closeButton.setIcon(new ImageIcon(closeIcon));
+            ImageIcon closeIcon = resourceLoader.loadIcon("close.png");
+            if (closeIcon != null && closeIcon.getIconWidth() > 0) {
+                closeButton.setIcon(closeIcon);
+            } else {
+                throw new Exception("Close icon not found");
+            }
         } catch (Exception e) {
             // Create a simple X icon as fallback
             BufferedImage xIcon = new BufferedImage(14, 14, BufferedImage.TYPE_INT_ARGB);
@@ -155,7 +162,7 @@ public class AdminRemoveCandidate extends JFrame {
         
         // Remove Candidate Page Header
         removeCandidatePageLabel = new JLabel("Remove Candidate Page");
-        removeCandidatePageLabel.setFont(interRegular.deriveFont(24f));
+        removeCandidatePageLabel.setFont(interBold.deriveFont(24f));
         removeCandidatePageLabel.setForeground(Color.WHITE);
         removeCandidatePageLabel.setBounds(217, 65, 405, 47);
         removeCandidatePageLabel.setHorizontalAlignment(SwingConstants.CENTER);
@@ -247,10 +254,10 @@ public class AdminRemoveCandidate extends JFrame {
         java.util.List<Candidate> candidates = DatabaseHelper.readCandidates();
         int yPos = 0;
         for (Candidate c : candidates) {
-            JLabel candidateLabel = new JLabel(c.name);
+            JLabel candidateLabel = new JLabel(c.name + " (" + c.position + ")");
             candidateLabel.setFont(interRegular.deriveFont(14f));
             candidateLabel.setForeground(new Color(1, 1, 1));
-            candidateLabel.setBounds(5, yPos, 196, 28);
+            candidateLabel.setBounds(5, yPos, 364, 28);
             candidateLabel.setCursor(new Cursor(Cursor.HAND_CURSOR));
             
             // Capture the candidate data in the listener
@@ -372,24 +379,22 @@ public class AdminRemoveCandidate extends JFrame {
         SwingUtilities.invokeLater(() -> new model.admin.AdminRemoveCandidate());
     }
     
-    // Method to load custom fonts
+    // Method to load custom fonts using ResourceLoader
     private void loadCustomFonts() {
         try {
             // Load Inter Bold font
-            File boldFontFile = new File("fonts/Inter-Bold.otf");
-            interBold = Font.createFont(Font.TRUETYPE_FONT, boldFontFile).deriveFont(24f);
+            interBold = resourceLoader.loadFont("Inter-Bold.otf", 24f);
             GraphicsEnvironment.getLocalGraphicsEnvironment().registerFont(interBold);
-        } catch (IOException | FontFormatException e) {
+        } catch (Exception e) {
             System.err.println("Could not load Inter Bold font: " + e.getMessage());
             interBold = new Font("Arial", Font.BOLD, 24);
         }
-        
+
         try {
             // Load Inter Regular font
-            File regularFontFile = new File("fonts/Inter-Regular.otf");
-            interRegular = Font.createFont(Font.TRUETYPE_FONT, regularFontFile).deriveFont(16f);
+            interRegular = resourceLoader.loadFont("Inter-Regular.otf", 16f);
             GraphicsEnvironment.getLocalGraphicsEnvironment().registerFont(interRegular);
-        } catch (IOException | FontFormatException e) {
+        } catch (Exception e) {
             System.err.println("Could not load Inter Regular font: " + e.getMessage());
             interRegular = new Font("Arial", Font.PLAIN, 16);
         }

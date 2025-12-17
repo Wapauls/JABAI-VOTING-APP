@@ -34,7 +34,7 @@ db.serialize(() => {
         )
     `);
 
-    // Votes table
+    // Votes table (tracks which student cast each vote)
     db.run(`
         CREATE TABLE IF NOT EXISTS votes (
             timestamp TEXT,
@@ -42,7 +42,9 @@ db.serialize(() => {
             position TEXT,
             course TEXT,
             year TEXT,
-            section TEXT
+            section TEXT,
+            studentID TEXT,
+            UNIQUE(studentID, candidate, position) ON CONFLICT IGNORE
         )
     `);
 
